@@ -9,20 +9,20 @@ use tokio::time::timeout;
 
 const TIMEOUT_SECS: u64 = 300;
 
-pub async fn run(state: SharedAgentState, prompt: &str, model: &str, worktree: &PathBuf) {
+pub async fn run(state: SharedAgentState, prompt: &str, _model: &str, worktree: &PathBuf, log_dir: &PathBuf) {
     {
         let mut s = state.lock().await;
         s.status = AgentStatus::Running;
         s.started_at = Some(Utc::now());
         s.worktree = Some(worktree.clone());
     }
-    let log_path = worktree.join("logs.txt");
-    let prompt_path = worktree.join("prompt.md");
+    let log_path = log_dir.join("logs.txt");
+    let prompt_path = log_dir.join("prompt.md");
     let _ = fs::write(&prompt_path, format!("# Prompt\n\n{}", prompt)).await;
     let result = timeout(
         Duration::from_secs(TIMEOUT_SECS),
         Command::new("gemini")
-            .args(["--model", model, "-y", prompt])
+            .args(["-y", prompt])
             .current_dir(worktree)
             .output(),
     )

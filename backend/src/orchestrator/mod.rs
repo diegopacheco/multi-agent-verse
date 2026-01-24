@@ -1,8 +1,8 @@
 use crate::agents::{create_shared_agent, run_agent};
 use crate::models::{AgentInfo, AgentRole, AgentStatus, Event, Session, Task, TaskStatus};
 use crate::solutions::{
-    create_agent_dir, create_project_dir, write_event_log, write_session_state, write_summary,
-    write_tasks_json,
+    create_agent_dir, create_code_dir, create_project_dir, write_event_log, write_session_state,
+    write_summary, write_tasks_json,
 };
 use chrono::Utc;
 use std::path::PathBuf;
@@ -43,13 +43,6 @@ pub async fn run_orchestration(shared_session: SharedSession) {
         let _ = write_session_state(&base_path, &session).await;
     }
     run_task_splitter(shared_session.clone(), &cli_agent, &model, &base_path, &prompt).await;
-    let task_splitter_status = {
-        let session = shared_session.read().await;
-        session.task_splitter.status
-    };
-    if task_splitter_status != AgentStatus::Done {
-        return;
-    }
     run_coordinator(shared_session.clone(), &cli_agent, &model, &base_path).await;
     run_workers(shared_session.clone(), &cli_agent, &model, &base_path).await;
     run_testers(shared_session.clone(), &cli_agent, &model, &base_path).await;
@@ -132,17 +125,19 @@ async fn run_task_splitter(
         );
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
-        if final_state.status == AgentStatus::Done {
-            let tasks = parse_tasks_from_output(base_path, worker_count, user_prompt).await;
-            session.tasks = tasks.clone();
-            let event = Event::info(
-                format!("{} tasks created", session.tasks.len()),
-                Some(agent_id),
-            );
-            session.events.push(event.clone());
-            let _ = write_event_log(base_path, &event).await;
-            let _ = write_tasks_json(base_path, &session.tasks).await;
-        }
+        let tasks = if final_state.status == AgentStatus::Done {
+            parse_tasks_from_output(base_path, worker_count, user_prompt).await
+        } else {
+            generate_fallback_tasks(worker_count, user_prompt)
+        };
+        session.tasks = tasks.clone();
+        let event = Event::info(
+            format!("{} tasks created", session.tasks.len()),
+            Some(agent_id),
+        );
+        session.events.push(event.clone());
+        let _ = write_event_log(base_path, &event).await;
+        let _ = write_tasks_json(base_path, &session.tasks).await;
         let _ = write_session_state(base_path, &session).await;
     }
 }
@@ -202,6 +197,21 @@ async fn run_workers(
     model: &str,
     base_path: &PathBuf,
 ) {
+    let code_path = match create_code_dir(base_path).await {
+        Ok(p) => p,
+        Err(e) => {
+            let mut session = shared_session.write().await;
+            let event = Event::error(format!("Failed to create code dir: {}", e), None);
+            session.events.push(event);
+            return;
+        }
+    };
+    {
+        let mut session = shared_session.write().await;
+        let event = Event::info("Code directory created".to_string(), None);
+        session.events.push(event.clone());
+        let _ = write_event_log(base_path, &event).await;
+    }
     let worker_tasks: Vec<(String, Vec<Task>)> = {
         let session = shared_session.read().await;
         session
@@ -224,8 +234,9 @@ async fn run_workers(
         let cli = cli_agent.to_string();
         let m = model.to_string();
         let bp = base_path.clone();
+        let cp = code_path.clone();
         let handle = tokio::spawn(async move {
-            run_single_worker(shared, &worker_id, &tasks, &cli, &m, &bp).await;
+            run_single_worker(shared, &worker_id, &tasks, &cli, &m, &bp, &cp).await;
         });
         handles.push(handle);
     }
@@ -241,8 +252,9 @@ async fn run_single_worker(
     cli_agent: &str,
     model: &str,
     base_path: &PathBuf,
+    code_path: &PathBuf,
 ) {
-    let worktree = match create_agent_dir(base_path, worker_id).await {
+    let log_dir = match create_agent_dir(base_path, worker_id).await {
         Ok(p) => p,
         Err(_) => return,
     };
@@ -251,7 +263,7 @@ async fn run_single_worker(
         if let Some(worker) = session.workers.iter_mut().find(|w| w.id == worker_id) {
             worker.status = AgentStatus::Running;
             worker.started_at = Some(Utc::now());
-            worker.worktree = Some(worktree.clone());
+            worker.worktree = Some(code_path.clone());
         }
         let event = Event::info(format!("{} started", worker_id), Some(worker_id.to_string()));
         session.events.push(event.clone());
@@ -278,9 +290,9 @@ async fn run_single_worker(
             task.id, task.description
         );
         let agent_info =
-            AgentInfo::new(worker_id.to_string(), AgentRole::Worker, model.to_string());
+            AgentInfo::new_with_log_dir(worker_id.to_string(), AgentRole::Worker, model.to_string(), log_dir.clone());
         let agent_state = create_shared_agent(agent_info);
-        run_agent(cli_agent, agent_state.clone(), &prompt, model, &worktree).await;
+        run_agent(cli_agent, agent_state.clone(), &prompt, model, code_path).await;
         let final_state = agent_state.lock().await;
         {
             let mut session = shared_session.write().await;
@@ -329,6 +341,7 @@ async fn run_testers(
     model: &str,
     base_path: &PathBuf,
 ) {
+    let code_path = base_path.join("code");
     let tester_tasks: Vec<(String, Vec<Task>)> = {
         let session = shared_session.read().await;
         session
@@ -354,8 +367,9 @@ async fn run_testers(
         let cli = cli_agent.to_string();
         let m = model.to_string();
         let bp = base_path.clone();
+        let cp = code_path.clone();
         let handle = tokio::spawn(async move {
-            run_single_tester(shared, &tester_id, &tasks, &cli, &m, &bp).await;
+            run_single_tester(shared, &tester_id, &tasks, &cli, &m, &bp, &cp).await;
         });
         handles.push(handle);
     }
@@ -371,8 +385,9 @@ async fn run_single_tester(
     cli_agent: &str,
     model: &str,
     base_path: &PathBuf,
+    code_path: &PathBuf,
 ) {
-    let worktree = match create_agent_dir(base_path, tester_id).await {
+    let log_dir = match create_agent_dir(base_path, tester_id).await {
         Ok(p) => p,
         Err(_) => return,
     };
@@ -381,7 +396,7 @@ async fn run_single_tester(
         if let Some(tester) = session.testers.iter_mut().find(|t| t.id == tester_id) {
             tester.status = AgentStatus::Running;
             tester.started_at = Some(Utc::now());
-            tester.worktree = Some(worktree.clone());
+            tester.worktree = Some(code_path.clone());
         }
         let event = Event::info(format!("{} started", tester_id), Some(tester_id.to_string()));
         session.events.push(event.clone());
@@ -403,9 +418,9 @@ async fn run_single_tester(
             task.id, task.description
         );
         let agent_info =
-            AgentInfo::new(tester_id.to_string(), AgentRole::Tester, model.to_string());
+            AgentInfo::new_with_log_dir(tester_id.to_string(), AgentRole::Tester, model.to_string(), log_dir.clone());
         let agent_state = create_shared_agent(agent_info);
-        run_agent(cli_agent, agent_state.clone(), &prompt, model, &worktree).await;
+        run_agent(cli_agent, agent_state.clone(), &prompt, model, code_path).await;
         let final_state = agent_state.lock().await;
         {
             let mut session = shared_session.write().await;

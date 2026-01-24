@@ -30,6 +30,8 @@ pub struct AgentInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub worktree: Option<PathBuf>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub log_dir: Option<PathBuf>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub started_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub finished_at: Option<DateTime<Utc>>,
@@ -157,6 +159,20 @@ impl AgentInfo {
             model,
             status: AgentStatus::Pending,
             worktree: None,
+            log_dir: None,
+            started_at: None,
+            finished_at: None,
+        }
+    }
+
+    pub fn new_with_log_dir(id: String, role: AgentRole, model: String, log_dir: PathBuf) -> Self {
+        Self {
+            id,
+            role,
+            model,
+            status: AgentStatus::Pending,
+            worktree: None,
+            log_dir: Some(log_dir),
             started_at: None,
             finished_at: None,
         }
@@ -191,15 +207,6 @@ impl Event {
         Self {
             timestamp: Utc::now(),
             level: "INFO".to_string(),
-            agent_id,
-            message,
-        }
-    }
-
-    pub fn warn(message: String, agent_id: Option<String>) -> Self {
-        Self {
-            timestamp: Utc::now(),
-            level: "WARN".to_string(),
             agent_id,
             message,
         }

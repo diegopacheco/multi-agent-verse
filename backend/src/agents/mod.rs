@@ -21,11 +21,15 @@ pub async fn run_agent(
     model: &str,
     worktree: &PathBuf,
 ) {
+    let log_dir = {
+        let s = state.lock().await;
+        s.log_dir.clone().unwrap_or_else(|| worktree.clone())
+    };
     match cli_agent {
-        "claude-code" => claude::run(state, prompt, model, worktree).await,
-        "codex" => codex::run(state, prompt, model, worktree).await,
-        "copilot" => copilot::run(state, prompt, model, worktree).await,
-        "gemini" => gemini::run(state, prompt, model, worktree).await,
+        "claude-code" => claude::run(state, prompt, model, worktree, &log_dir).await,
+        "codex" => codex::run(state, prompt, model, worktree, &log_dir).await,
+        "copilot" => copilot::run(state, prompt, model, worktree, &log_dir).await,
+        "gemini" => gemini::run(state, prompt, model, worktree, &log_dir).await,
         _ => {
             let mut s = state.lock().await;
             s.status = AgentStatus::Error;
