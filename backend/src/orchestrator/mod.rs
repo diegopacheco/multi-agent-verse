@@ -1,10 +1,10 @@
-use crate::agents::{create_shared_agent, run_agent, SharedAgentState};
+use crate::agents::{create_shared_agent, run_agent};
 use crate::models::{AgentInfo, AgentRole, AgentStatus, Event, Session, Task, TaskStatus};
 use crate::solutions::{
-    create_agent_dir, create_project_dir, write_event_log, write_summary, write_tasks_json,
+    create_agent_dir, create_project_dir, write_event_log, write_session_state, write_summary,
+    write_tasks_json,
 };
 use chrono::Utc;
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -22,7 +22,7 @@ pub async fn run_orchestration(shared_session: SharedSession) {
             session.cli_agent.clone(),
             session.model.clone(),
             session.project_name.clone(),
-            String::new(),
+            session.prompt.clone(),
         )
     };
     let base_path = match create_project_dir(&project_name).await {
@@ -40,8 +40,9 @@ pub async fn run_orchestration(shared_session: SharedSession) {
         let event = Event::info("Project directory created".to_string(), None);
         session.events.push(event.clone());
         let _ = write_event_log(&base_path, &event).await;
+        let _ = write_session_state(&base_path, &session).await;
     }
-    run_task_splitter(shared_session.clone(), &cli_agent, &model, &base_path).await;
+    run_task_splitter(shared_session.clone(), &cli_agent, &model, &base_path, &prompt).await;
     let task_splitter_status = {
         let session = shared_session.read().await;
         session.task_splitter.status
@@ -55,6 +56,7 @@ pub async fn run_orchestration(shared_session: SharedSession) {
     {
         let session = shared_session.read().await;
         let _ = write_summary(&base_path, &session).await;
+        let _ = write_session_state(&base_path, &session).await;
     }
 }
 
@@ -63,6 +65,7 @@ async fn run_task_splitter(
     cli_agent: &str,
     model: &str,
     base_path: &PathBuf,
+    user_prompt: &str,
 ) {
     let agent_id = {
         let session = shared_session.read().await;
@@ -73,7 +76,10 @@ async fn run_task_splitter(
         Err(e) => {
             let mut session = shared_session.write().await;
             session.task_splitter.status = AgentStatus::Error;
-            let event = Event::error(format!("Failed to create task-splitter dir: {}", e), Some(agent_id));
+            let event = Event::error(
+                format!("Failed to create task-splitter dir: {}", e),
+                Some(agent_id),
+            );
             session.events.push(event);
             return;
         }
@@ -86,17 +92,24 @@ async fn run_task_splitter(
         let event = Event::info("task-splitter started".to_string(), Some(agent_id.clone()));
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
     }
-    let prompt = {
+    let worker_count = {
         let session = shared_session.read().await;
-        format!(
-            "You are a task splitter agent. Analyze this prompt and break it into {} parallel tasks. \
-            Output ONLY a JSON array of task objects with 'id' and 'description' fields. \
-            Tasks must be independent and executable in parallel.\n\nPrompt: {}",
-            session.workers.len(),
-            session.project_name
-        )
+        session.workers.len()
     };
+    let prompt = format!(
+        "You are a task splitter agent. Analyze this project request and break it into exactly {} independent, parallel tasks.\n\n\
+        IMPORTANT: Output ONLY valid JSON - no markdown, no explanation, just the JSON array.\n\n\
+        Output format (JSON array):\n\
+        [\n\
+          {{\"id\": \"1\", \"description\": \"Brief but meaningful task description\"}},\n\
+          {{\"id\": \"2\", \"description\": \"Another meaningful task description\"}}\n\
+        ]\n\n\
+        Project request:\n{}",
+        worker_count,
+        user_prompt
+    );
     let agent_state = {
         let session = shared_session.read().await;
         create_shared_agent(session.task_splitter.clone())
@@ -120,7 +133,7 @@ async fn run_task_splitter(
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
         if final_state.status == AgentStatus::Done {
-            let tasks = generate_mock_tasks(session.workers.len());
+            let tasks = parse_tasks_from_output(base_path, worker_count, user_prompt).await;
             session.tasks = tasks.clone();
             let event = Event::info(
                 format!("{} tasks created", session.tasks.len()),
@@ -130,13 +143,14 @@ async fn run_task_splitter(
             let _ = write_event_log(base_path, &event).await;
             let _ = write_tasks_json(base_path, &session.tasks).await;
         }
+        let _ = write_session_state(base_path, &session).await;
     }
 }
 
 async fn run_coordinator(
     shared_session: SharedSession,
-    cli_agent: &str,
-    model: &str,
+    _cli_agent: &str,
+    _model: &str,
     base_path: &PathBuf,
 ) {
     let agent_id = {
@@ -155,6 +169,7 @@ async fn run_coordinator(
         let event = Event::info("coordinator started".to_string(), Some(agent_id.clone()));
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
     }
     {
         let mut session = shared_session.write().await;
@@ -164,7 +179,7 @@ async fn run_coordinator(
             if i < workers.len() {
                 task.assigned_worker = Some(workers[i].clone());
             }
-            if i < testers.len() {
+            if !testers.is_empty() {
                 task.assigned_tester = Some(testers[i % testers.len()].clone());
             }
         }
@@ -177,6 +192,7 @@ async fn run_coordinator(
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
         let _ = write_tasks_json(base_path, &session.tasks).await;
+        let _ = write_session_state(base_path, &session).await;
     }
 }
 
@@ -240,6 +256,7 @@ async fn run_single_worker(
         let event = Event::info(format!("{} started", worker_id), Some(worker_id.to_string()));
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
     }
     for task in tasks {
         {
@@ -254,12 +271,14 @@ async fn run_single_worker(
             );
             session.events.push(event.clone());
             let _ = write_event_log(base_path, &event).await;
+            let _ = write_session_state(base_path, &session).await;
         }
         let prompt = format!(
             "You are a worker agent. Complete this task:\n\nTask ID: {}\nDescription: {}",
             task.id, task.description
         );
-        let agent_info = AgentInfo::new(worker_id.to_string(), AgentRole::Worker, model.to_string());
+        let agent_info =
+            AgentInfo::new(worker_id.to_string(), AgentRole::Worker, model.to_string());
         let agent_state = create_shared_agent(agent_info);
         run_agent(cli_agent, agent_state.clone(), &prompt, model, &worktree).await;
         let final_state = agent_state.lock().await;
@@ -285,6 +304,7 @@ async fn run_single_worker(
             session.events.push(event.clone());
             let _ = write_event_log(base_path, &event).await;
             let _ = write_tasks_json(base_path, &session.tasks).await;
+            let _ = write_session_state(base_path, &session).await;
         }
     }
     {
@@ -293,9 +313,13 @@ async fn run_single_worker(
             worker.status = AgentStatus::Done;
             worker.finished_at = Some(Utc::now());
         }
-        let event = Event::info(format!("{} finished all tasks", worker_id), Some(worker_id.to_string()));
+        let event = Event::info(
+            format!("{} finished all tasks", worker_id),
+            Some(worker_id.to_string()),
+        );
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
     }
 }
 
@@ -362,6 +386,7 @@ async fn run_single_tester(
         let event = Event::info(format!("{} started", tester_id), Some(tester_id.to_string()));
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
     }
     for task in tasks {
         {
@@ -377,7 +402,8 @@ async fn run_single_tester(
             "You are a tester agent. Validate and test the work done for this task:\n\nTask ID: {}\nDescription: {}",
             task.id, task.description
         );
-        let agent_info = AgentInfo::new(tester_id.to_string(), AgentRole::Tester, model.to_string());
+        let agent_info =
+            AgentInfo::new(tester_id.to_string(), AgentRole::Tester, model.to_string());
         let agent_state = create_shared_agent(agent_info);
         run_agent(cli_agent, agent_state.clone(), &prompt, model, &worktree).await;
         let final_state = agent_state.lock().await;
@@ -403,6 +429,7 @@ async fn run_single_tester(
             session.events.push(event.clone());
             let _ = write_event_log(base_path, &event).await;
             let _ = write_tasks_json(base_path, &session.tasks).await;
+            let _ = write_session_state(base_path, &session).await;
         }
     }
     {
@@ -411,14 +438,66 @@ async fn run_single_tester(
             tester.status = AgentStatus::Done;
             tester.finished_at = Some(Utc::now());
         }
-        let event = Event::info(format!("{} finished all tests", tester_id), Some(tester_id.to_string()));
+        let event = Event::info(
+            format!("{} finished all tests", tester_id),
+            Some(tester_id.to_string()),
+        );
         session.events.push(event.clone());
         let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
     }
 }
 
-fn generate_mock_tasks(count: usize) -> Vec<Task> {
+async fn parse_tasks_from_output(base_path: &PathBuf, count: usize, user_prompt: &str) -> Vec<Task> {
+    let log_path = base_path.join("task-splitter").join("logs.txt");
+    if let Ok(logs) = tokio::fs::read_to_string(&log_path).await {
+        if let Some(start) = logs.find('[') {
+            if let Some(end) = logs.rfind(']') {
+                let json_str = &logs[start..=end];
+                if let Ok(parsed) = serde_json::from_str::<Vec<serde_json::Value>>(json_str) {
+                    let tasks: Vec<Task> = parsed
+                        .iter()
+                        .enumerate()
+                        .map(|(i, v)| {
+                            let id = v.get("id")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or(&format!("{}", i + 1))
+                                .to_string();
+                            let desc = v.get("description")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("Implement feature")
+                                .to_string();
+                            Task::new(id, desc)
+                        })
+                        .collect();
+                    if !tasks.is_empty() {
+                        return tasks;
+                    }
+                }
+            }
+        }
+    }
+    generate_fallback_tasks(count, user_prompt)
+}
+
+fn generate_fallback_tasks(count: usize, user_prompt: &str) -> Vec<Task> {
+    let prompt_words: Vec<&str> = user_prompt.split_whitespace().take(10).collect();
+    let short_prompt = if prompt_words.len() > 5 {
+        format!("{}...", prompt_words[..5].join(" "))
+    } else {
+        prompt_words.join(" ")
+    };
     (1..=count)
-        .map(|i| Task::new(format!("{}", i), format!("Task {} - implement feature", i)))
+        .map(|i| {
+            let desc = match i {
+                1 => format!("Setup project structure for: {}", short_prompt),
+                2 => format!("Implement core logic for: {}", short_prompt),
+                3 => format!("Add UI components for: {}", short_prompt),
+                4 => format!("Implement data handling for: {}", short_prompt),
+                5 => format!("Add error handling for: {}", short_prompt),
+                _ => format!("Additional feature {} for: {}", i, short_prompt),
+            };
+            Task::new(format!("{}", i), desc)
+        })
         .collect()
 }

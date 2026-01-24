@@ -43,6 +43,7 @@ pub async fn create_session(
     let session = Session {
         id: session_id.clone(),
         project_name: String::new(),
+        prompt: String::new(),
         model: req.model.clone(),
         cli_agent: req.cli_agent.clone(),
         task_splitter,
@@ -77,6 +78,7 @@ pub async fn run_session(
     {
         let mut session = shared_session.write().await;
         session.project_name = req.project_name.clone();
+        session.prompt = req.prompt.clone();
     }
     let ss = shared_session.clone();
     tokio::spawn(async move {

@@ -71,6 +71,7 @@ pub struct Event {
 pub struct Session {
     pub id: String,
     pub project_name: String,
+    pub prompt: String,
     pub model: String,
     pub cli_agent: String,
     pub task_splitter: AgentInfo,
@@ -219,12 +220,18 @@ impl Session {
         if self.tasks.is_empty() {
             return 0.0;
         }
-        let done = self
+        let total_weight: f64 = self
             .tasks
             .iter()
-            .filter(|t| t.status == TaskStatus::Done)
-            .count();
-        (done as f64 / self.tasks.len() as f64) * 100.0
+            .map(|t| match t.status {
+                TaskStatus::Pending => 0.0,
+                TaskStatus::InProgress => 0.33,
+                TaskStatus::Testing => 0.66,
+                TaskStatus::Done => 1.0,
+                TaskStatus::Failed => 1.0,
+            })
+            .sum();
+        (total_weight / self.tasks.len() as f64) * 100.0
     }
 
     pub fn elapsed_secs(&self) -> i64 {

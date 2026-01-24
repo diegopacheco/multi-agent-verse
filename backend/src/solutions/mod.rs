@@ -3,6 +3,22 @@ use chrono::Utc;
 use std::path::PathBuf;
 use tokio::fs;
 
+pub fn get_solutions_base_path() -> Result<PathBuf, String> {
+    std::env::current_dir()
+        .map_err(|e| e.to_string())?
+        .parent()
+        .ok_or("Cannot get parent directory")?
+        .join("solutions")
+        .canonicalize()
+        .or_else(|_| {
+            Ok(std::env::current_dir()
+                .map_err(|e| e.to_string())?
+                .parent()
+                .ok_or("Cannot get parent directory")?
+                .join("solutions"))
+        })
+}
+
 pub async fn create_project_dir(project_name: &str) -> Result<PathBuf, String> {
     let base_path = std::env::current_dir()
         .map_err(|e| e.to_string())?
@@ -37,12 +53,6 @@ pub async fn write_event_log(base_path: &PathBuf, event: &Event) -> Result<(), S
         event.agent_id.as_deref().unwrap_or("system"),
         event.message
     );
-    fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-        .await
-        .map_err(|e| e.to_string())?;
     let existing = fs::read_to_string(&log_path).await.unwrap_or_default();
     fs::write(&log_path, format!("{}{}", existing, line))
         .await
@@ -57,6 +67,23 @@ pub async fn write_tasks_json(base_path: &PathBuf, tasks: &[Task]) -> Result<(),
         .await
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+pub async fn write_session_state(base_path: &PathBuf, session: &Session) -> Result<(), String> {
+    let state_path = base_path.join("session.json");
+    let json = serde_json::to_string_pretty(session).map_err(|e| e.to_string())?;
+    fs::write(&state_path, json)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+pub async fn read_session_state(base_path: &PathBuf) -> Result<Session, String> {
+    let state_path = base_path.join("session.json");
+    let json = fs::read_to_string(&state_path)
+        .await
+        .map_err(|e| e.to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 
 pub async fn write_summary(base_path: &PathBuf, session: &Session) -> Result<(), String> {
@@ -94,17 +121,4 @@ pub async fn read_agent_logs(base_path: &PathBuf, agent_id: &str) -> Result<Stri
     fs::read_to_string(&log_path)
         .await
         .map_err(|e| e.to_string())
-}
-
-pub async fn write_test_results(
-    base_path: &PathBuf,
-    tester_id: &str,
-    results: &serde_json::Value,
-) -> Result<(), String> {
-    let results_path = base_path.join(tester_id).join("results.json");
-    let json = serde_json::to_string_pretty(results).map_err(|e| e.to_string())?;
-    fs::write(&results_path, json)
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(())
 }
