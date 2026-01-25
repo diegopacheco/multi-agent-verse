@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { getProjects, startPreview, stopPreview } from '../api/client'
 
 function PreviewPanel() {
@@ -7,8 +7,20 @@ function PreviewPanel() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const pendingTimeoutRef = useRef<number | null>(null)
   const activeProjectRef = useRef<string | null>(null)
+
+  const handleEscKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Escape' && isFullscreen) {
+      setIsFullscreen(false)
+    }
+  }, [isFullscreen])
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscKey)
+    return () => document.removeEventListener('keydown', handleEscKey)
+  }, [handleEscKey])
 
   useEffect(() => {
     getProjects()
@@ -99,12 +111,20 @@ function PreviewPanel() {
             Refresh
           </button>
           {previewUrl && (
-            <button
-              onClick={handleStop}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition-colors"
-            >
-              Stop Preview
-            </button>
+            <>
+              <button
+                onClick={() => setIsFullscreen(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                Fullscreen
+              </button>
+              <button
+                onClick={handleStop}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition-colors"
+              >
+                Stop Preview
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -157,6 +177,32 @@ function PreviewPanel() {
           )}
         </div>
       </div>
+      {isFullscreen && previewUrl && (
+        <div className="fixed inset-0 z-50 bg-black">
+          <div className="absolute top-4 right-4 z-10 flex gap-2">
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
+            >
+              Exit Fullscreen (ESC)
+            </button>
+            <button
+              onClick={() => {
+                setIsFullscreen(false)
+                handleStop()
+              }}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-medium transition-colors"
+            >
+              Stop
+            </button>
+          </div>
+          <iframe
+            src={previewUrl}
+            className="w-full h-full border-0"
+            title="Solution Preview Fullscreen"
+          />
+        </div>
+      )}
     </div>
   )
 }

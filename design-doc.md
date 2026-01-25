@@ -69,18 +69,24 @@ Screen is split into two panels:
 - When clicking an agent, show a modal/drawer with:
   - Agent name and model
   - Current status (pending, running, done, error)
-  - Log output (stdout/stderr)
+  - Log output (stdout/stderr) - viewable even while agent is running
   - Error message if failed
 - Real-time status updates via polling
+- Partial logs available while agents are running (shows "RUNNING" status with execution details)
+- Fullscreen button to expand panel to full screen (ESC to exit)
 
 **Right Panel - Task List (50%)**
 - Display tasks as a TODO list with checkboxes
+- Scrollable area when there are many tasks
+- Tasks are grouped by type: Parallel Tasks and Sequential Tasks
 - Each task shows:
   - Task ID
+  - Task type (PARALLEL or SEQUENTIAL)
   - Task description
   - Assigned worker (if any)
   - Assigned tester (if any)
   - Status indicator (pending, in-progress, testing, done, failed)
+- Clicking a task opens the log viewer for its assigned worker
 - Tasks update in real-time as workers/testers complete them
 - Visual distinction between:
   - Pending tasks (gray)
@@ -88,6 +94,7 @@ Screen is split into two panels:
   - Testing tasks (yellow)
   - Completed tasks (green, with checkmark)
   - Failed tasks (red, with X)
+- Fullscreen button to expand panel to full screen (ESC to exit)
 
 ### Tab 4 - Preview
 
@@ -105,7 +112,14 @@ Screen is split into two panels (50/50):
   1. Backend starts the project's `run.sh` (inside `solutions/{project_name}/code/`)
   2. The iframe loads `http://localhost:5678/index.html`
 - If no project is selected, shows a placeholder message
-- Includes a stop button to stop the currently running preview
+- Control buttons when preview is running:
+  - Refresh: Reload project list
+  - Fullscreen: Enter fullscreen mode for the preview
+  - Stop Preview: Stop the currently running preview
+- Fullscreen mode:
+  - Preview takes up the entire screen
+  - ESC key exits fullscreen mode
+  - Exit and Stop buttons available in fullscreen
 
 ### API Endpoints for Preview
 
@@ -132,6 +146,7 @@ POST /api/preview/stop
   - "[timestamp] worker-1 completed task #1"
   - "[timestamp] tester-1 testing task #1"
   - "[timestamp] tester-1 approved task #1"
+  - Fullscreen button to expand panel to full screen (ESC to exit)
 - Toast notifications for important events (task completed, error occurred)
 - Agent execution duration displayed on each node
 

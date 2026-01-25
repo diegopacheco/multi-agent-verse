@@ -2,6 +2,7 @@ import { Task, TaskStatus, TaskType } from '../api/client'
 
 interface TaskListProps {
   tasks: Task[]
+  onTaskClick?: (task: Task) => void
 }
 
 function getStatusStyles(status: TaskStatus): { bg: string; text: string; icon: string } {
@@ -30,11 +31,15 @@ function getTaskTypeStyles(taskType: TaskType): { bg: string; text: string; labe
   }
 }
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({ task, onClick }: { task: Task; onClick?: (task: Task) => void }) {
   const statusStyles = getStatusStyles(task.status)
   const typeStyles = getTaskTypeStyles(task.task_type || 'parallel')
+  const isClickable = !!onClick && task.assigned_worker
   return (
-    <div className={`p-3 rounded-lg border border-slate-700 ${statusStyles.bg}`}>
+    <div
+      className={`p-3 rounded-lg border border-slate-700 ${statusStyles.bg} ${isClickable ? 'cursor-pointer hover:border-slate-500 transition-colors' : ''}`}
+      onClick={() => isClickable && onClick(task)}
+    >
       <div className="flex items-start gap-3">
         <span className={`font-mono text-lg ${statusStyles.text}`}>
           {statusStyles.icon}
@@ -55,6 +60,9 @@ function TaskCard({ task }: { task: Task }) {
             <span className={`text-xs px-2 py-0.5 rounded ${statusStyles.bg} ${statusStyles.text} uppercase`}>
               {task.status}
             </span>
+            {isClickable && (
+              <span className="text-xs text-slate-500">(click for logs)</span>
+            )}
           </div>
           <p className="text-sm text-slate-300 mt-1 truncate">
             {task.description}
@@ -73,7 +81,7 @@ function TaskCard({ task }: { task: Task }) {
   )
 }
 
-function TaskList({ tasks }: TaskListProps) {
+function TaskList({ tasks, onTaskClick }: TaskListProps) {
   if (tasks.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-slate-500">
@@ -97,7 +105,7 @@ function TaskList({ tasks }: TaskListProps) {
           </h3>
           <div className="space-y-2">
             {parallelTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} onClick={onTaskClick} />
             ))}
           </div>
         </div>
@@ -110,7 +118,7 @@ function TaskList({ tasks }: TaskListProps) {
           </h3>
           <div className="space-y-2">
             {sequentialTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
+              <TaskCard key={task.id} task={task} onClick={onTaskClick} />
             ))}
           </div>
         </div>

@@ -73,8 +73,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="py-6 px-8 border-b border-slate-800">
+    <div className="h-screen flex flex-col overflow-hidden">
+      <header className="flex-shrink-0 py-6 px-8 border-b border-slate-800">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-3xl font-bold">Multi-Agent Verse</h1>
           <p className="text-slate-400 text-sm">
@@ -82,7 +82,7 @@ function App() {
           </p>
         </div>
       </header>
-      <nav className="border-b border-slate-800">
+      <nav className="flex-shrink-0 border-b border-slate-800">
         <div className="max-w-6xl mx-auto flex">
           <button
             className={getTabClass('config')}
@@ -110,12 +110,12 @@ function App() {
           </button>
         </div>
       </nav>
-      <main className="flex-1 p-8">
+      <main className="flex-1 p-8 overflow-hidden">
         <div className="max-w-6xl mx-auto h-full">
-          <div style={{ display: activeTab === 'config' ? 'block' : 'none' }}>
+          <div className="h-full" style={{ display: activeTab === 'config' ? 'block' : 'none' }}>
             <ConfigPanel onNext={handleConfigNext} />
           </div>
-          <div style={{ display: activeTab === 'prompt' ? 'block' : 'none' }}>
+          <div className="h-full" style={{ display: activeTab === 'prompt' ? 'block' : 'none' }}>
             {config && (
               <PromptPanel
                 config={config}
@@ -125,7 +125,7 @@ function App() {
               />
             )}
           </div>
-          <div style={{ display: activeTab === 'monitor' ? 'block' : 'none' }}>
+          <div className="h-full" style={{ display: activeTab === 'monitor' ? 'block' : 'none' }}>
             {sessionId && config && (
               <MonitorPanel
                 sessionId={sessionId}
@@ -136,7 +136,7 @@ function App() {
               />
             )}
           </div>
-          <div style={{ display: activeTab === 'preview' ? 'block' : 'none' }}>
+          <div className="h-full" style={{ display: activeTab === 'preview' ? 'block' : 'none' }}>
             <PreviewPanel />
           </div>
         </div>

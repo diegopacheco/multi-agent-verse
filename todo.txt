@@ -1,15 +1,19 @@
 BACKLOG
 
-* [ ] The Tasks area in tab 3 monitor is not scrollable when there are many tasks, we should be able to scroll there and see all tasks. Update design-docs.md as well.
-* [ ] A parallel task failled and I should be able to click on the failled task on the task area and see the logs and I wohuld be able to scroll there and see that for all tasks, update the design-doc as well.
-* [ ] On tab 4 preview - there is a refresh and stop button once the preview is running I sohuld be able to have a button to make full screen and ESC should go backl to normal view this should be on the design-docs.md too. 
-* [ ] While the coordinator is running on tab 3 monitor, I should be able to see partial updates, I can only see the logs when its done. Update the design-docs.md as well.
-* [ ] (testing) Add unit test to the Rust code.
-* [ ] (testing) Add unit test to the React/TanStack code.
-* [ ] (testing) Make sure we have end-to-end tests for the main user flows.
+* [ ] When I click on the name of agent, when the modal show up I should be able to close it with ESC. Also update the design-doc.md.
 
 DONE
 
+* [x] The area for Agents and Tasks in tab 3 monitor are too small - Added fullscreen buttons to Agents, Tasks, and Event Log panels. ESC key exits fullscreen. Updated design-doc.md.
+
+* [x] (testing) Make sure we have end-to-end tests for the main user flows. - Created e2e-test.sh with tests for backend health, session creation, status/tasks/events/projects endpoints.
+* [x] build-all.sh must use bun not node. - Changed npm to bun in build-all.sh.
+* [x] (testing) Add unit test to the Rust code. - Added 15 unit tests in src/models/mod.rs covering AgentInfo, Task, Event, Session, and serialization.
+* [x] (testing) Add unit test to the React/TanStack code. - Added vitest, @testing-library/react. Created 14 tests in client.test.ts and ProgressBar.test.tsx.
+* [x] The Tasks area in tab 3 monitor is not scrollable when there are many tasks. - Fixed by adding proper h-screen, overflow-hidden, and flex constraints in App.tsx and MonitorPanel.tsx. Updated design-doc.md.
+* [x] Click on failed task to see logs. - Added onTaskClick handler to TaskList, tasks are now clickable and show worker logs in modal. Updated design-doc.md.
+* [x] Fullscreen preview with ESC to exit. - Added fullscreen button, ESC key handler, and fullscreen overlay in PreviewPanel.tsx. Updated design-doc.md.
+* [x] Partial logs while coordinator running. - All agents now write "RUNNING" status to logs immediately when started, so logs are viewable before completion. Updated design-doc.md.
 * [x] Code in rust has a unused function src/models/mod.rs:227:12 we need clean up this techdebt. - Removed duplicate `Task::new()` function (was identical to `new_parallel()`). No more warnings.
 * [x] Task #1 PARALLEL pending (is pending forever) - Fixed bug in orchestrator: parallel_tasks were captured BEFORE worker assignments, so run_parallel_tasks never saw assigned workers. Now re-fetches tasks after assignment.
 * [x] would you say the whole code and @design-doc.md and README.md are in sync? - Updated README.md to match design-doc.md and code implementation (parallel/sequential tasks, 3-phase coordinator, tester manual+automated testing)

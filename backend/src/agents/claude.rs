@@ -19,6 +19,7 @@ pub async fn run(state: SharedAgentState, prompt: &str, model: &str, worktree: &
     let log_path = log_dir.join("logs.txt");
     let prompt_path = log_dir.join("prompt.md");
     let _ = fs::write(&prompt_path, format!("# Prompt\n\n{}", prompt)).await;
+    let _ = fs::write(&log_path, format!("=== RUNNING ===\nAgent started at {}\nModel: {}\nWorking directory: {:?}\n\nExecuting: claude -p <prompt> --model {} --dangerously-skip-permissions\n\nWaiting for completion...\n", Utc::now().format("%Y-%m-%d %H:%M:%S"), model, worktree, model)).await;
     let result = timeout(
         Duration::from_secs(TIMEOUT_SECS),
         Command::new("claude")
