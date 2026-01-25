@@ -16,8 +16,9 @@ The system has a Rust backend (Actix-web/Tokio) and a TypeScript frontend (React
 | codex | gpt-5.2 | `codex exec --full-auto --model gpt-5.2 <prompt>` |
 | copilot | sonnet | `copilot --allow-all --model sonnet -p <prompt>` |
 | gemini | gemini-3 | `gemini -y <prompt>` |
+| llr3 | llama3 | `llr3 -p <prompt>` |
 
-All four agent CLIs must be installed and available on PATH for their respective model to work.
+All five agent CLIs must be installed and available on PATH for their respective model to work. The llr3 agent runs Llama 3 locally via llama.cpp and automatically downloads the GGUF model (~4.7GB) to `~/llama/llama-3.gguf` on first run.
 
 ## How It Works
 
@@ -89,3 +90,4 @@ Stops both backend and frontend processes.
 - The backend session store is in-memory. Restarting the backend loses all active session state (persisted files in `solutions/` remain).
 - No authentication or multi-user support. Designed for single-user local use.
 - Gemini agent does not accept a model parameter. It always uses its default model.
+- LLR3 runs Llama 3 locally on CPU. Inference is slower than cloud-based agents and output is limited to 512 tokens per call.

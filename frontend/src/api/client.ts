@@ -155,4 +155,5 @@ export const MODEL_OPTIONS = [
   { cli_agent: 'codex', model: 'gpt-5.2', label: 'Codex / GPT 5.2' },
   { cli_agent: 'copilot', model: 'sonnet', label: 'Copilot / Sonnet' },
   { cli_agent: 'gemini', model: 'gemini-3', label: 'Gemini / Gemini 3' },
+  { cli_agent: 'llr3', model: 'llama3', label: 'LLR3 / Llama 3' },
 ]

@@ -18,13 +18,11 @@ function PreviewPanel() {
     setSelectedProject(project)
     setPreviewUrl(null)
     try {
-      if (previewUrl) {
-        await stopPreview()
-      }
+      await stopPreview().catch(() => {})
       const res = await startPreview(project)
       if (res.ok && res.url) {
         setTimeout(() => {
-          setPreviewUrl(res.url!)
+          setPreviewUrl(res.url + '?t=' + Date.now())
           setLoading(false)
         }, 2000)
       } else {
@@ -101,6 +99,7 @@ function PreviewPanel() {
           )}
           {!loading && previewUrl && (
             <iframe
+              key={previewUrl}
               src={previewUrl}
               className="w-full h-full border-0"
               title="Solution Preview"

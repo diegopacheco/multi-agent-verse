@@ -19,6 +19,7 @@ Multi-Agent Verse is a multi-agent orchestrator system with a Rust backend and T
 | codex | gpt-5.2 |
 | copilot | sonnet |
 | gemini | gemini-3 (default) |
+| llr3 | llama3 |
 
 ## Frontend Requirements
 
@@ -31,7 +32,7 @@ Multi-Agent Verse is a multi-agent orchestrator system with a Rust backend and T
               ├── worker (N)
               └── tester (N)
   ```
-- User selects the agent/model from dropdown (claude-code/opus-4-5, codex/gpt-5.2, copilot/sonnet, gemini/gemini-3)
+- User selects the agent/model from dropdown (claude-code/opus-4-5, codex/gpt-5.2, copilot/sonnet, gemini/gemini-3, llr3/llama3)
 - User inputs the number of worker instances (slider or number input)
 - User inputs the number of tester instances (slider or number input)
 - "Next" button to proceed to Tab 2
@@ -247,6 +248,12 @@ Command::new("gemini")
     .args(["-y", prompt])
     .current_dir(&worktree)
     .output()
+
+// llr3 uses local llama3 model
+Command::new("llr3")
+    .args(["-p", prompt])
+    .current_dir(&worktree)
+    .output()
 ```
 
 ### Workflow
@@ -349,7 +356,8 @@ multi-agent-verse/
 │       │   ├── claude.rs
 │       │   ├── codex.rs
 │       │   ├── copilot.rs
-│       │   └── gemini.rs
+│       │   ├── gemini.rs
+│       │   └── llr3.rs
 │       ├── models/
 │       │   └── mod.rs
 │       ├── routes/

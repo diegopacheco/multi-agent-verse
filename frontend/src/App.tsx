@@ -112,29 +112,33 @@ function App() {
       </nav>
       <main className="flex-1 p-8">
         <div className="max-w-6xl mx-auto h-full">
-          {activeTab === 'config' && (
+          <div style={{ display: activeTab === 'config' ? 'block' : 'none' }}>
             <ConfigPanel onNext={handleConfigNext} />
-          )}
-          {activeTab === 'prompt' && config && (
-            <PromptPanel
-              config={config}
-              onRun={handleRun}
-              onBack={handlePromptBack}
-              isRunning={isRunning}
-            />
-          )}
-          {activeTab === 'monitor' && sessionId && config && (
-            <MonitorPanel
-              sessionId={sessionId}
-              config={{
-                workerCount: config.workerCount,
-                testerCount: config.testerCount,
-              }}
-            />
-          )}
-          {activeTab === 'preview' && (
+          </div>
+          <div style={{ display: activeTab === 'prompt' ? 'block' : 'none' }}>
+            {config && (
+              <PromptPanel
+                config={config}
+                onRun={handleRun}
+                onBack={handlePromptBack}
+                isRunning={isRunning}
+              />
+            )}
+          </div>
+          <div style={{ display: activeTab === 'monitor' ? 'block' : 'none' }}>
+            {sessionId && config && (
+              <MonitorPanel
+                sessionId={sessionId}
+                config={{
+                  workerCount: config.workerCount,
+                  testerCount: config.testerCount,
+                }}
+              />
+            )}
+          </div>
+          <div style={{ display: activeTab === 'preview' ? 'block' : 'none' }}>
             <PreviewPanel />
-          )}
+          </div>
         </div>
       </main>
     </div>
