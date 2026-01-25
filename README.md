@@ -23,16 +23,16 @@ All five agent CLIs must be installed and available on PATH for their respective
 ## Result
 
 Configuration: Select the agent/model and set worker/tester counts. <br/>
-<img src="mav-result-1.png" width="400" />
+<img src="1-configuration.png" width="400" />
 
 Prompt: Enter project name and prompt. <br/>
-<img src="mav-result-2.png" width="400" />
+<img src="2-prompt.png" width="400" />
 
 Monitor: Real-time status of agents and tasks. <br/>
-<img src="mav-result-3.png" width="400" />
+<img src="3-monitor.png" width="400" />
 
 Preview: View generated project output. <br/>
-<img src="mav-result-4.png" width="400" />
+<img src="4-preview.png" width="400" />
  
 ## How It Works
 
