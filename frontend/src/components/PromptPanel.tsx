@@ -26,7 +26,7 @@ function PromptPanel({ config, onRun, onBack, isRunning }: PromptPanelProps) {
     if (projectName.trim() && prompt.trim()) {
       const enriched =
         prompt.trim() +
-        '\n\nmake sure the app works and have a run.sh that run the app, always run on the port 5678 and /index.html.'
+        '\n\nmake sure the app works and have a run.sh that run the app, always run on the port 5678 and /index.html. also create a stop.sh that kills the app started by run.sh.'
       onRun(projectName.trim(), enriched)
     }
   }
