@@ -69,7 +69,7 @@ function PreviewPanel() {
         </div>
       </div>
       <div className="flex gap-4 h-[calc(100vh-220px)]">
-        <div className="w-1/2 bg-slate-800 rounded-lg p-4 overflow-y-auto">
+        <div className="w-[15%] min-w-[140px] bg-slate-800 rounded-lg p-4 overflow-y-auto">
           <h3 className="text-sm font-medium text-slate-400 mb-3">Projects</h3>
           {projects.length === 0 && (
             <p className="text-slate-500 text-sm">No projects found in solutions/</p>
@@ -91,7 +91,7 @@ function PreviewPanel() {
             ))}
           </ul>
         </div>
-        <div className="w-1/2 bg-slate-800 rounded-lg overflow-hidden">
+        <div className="flex-1 bg-slate-800 rounded-lg overflow-hidden">
           {loading && (
             <div className="flex items-center justify-center h-full">
               <p className="text-slate-400">Starting project...</p>

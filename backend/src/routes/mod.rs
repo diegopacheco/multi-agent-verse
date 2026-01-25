@@ -47,6 +47,13 @@ async fn run_stop_sh(project_name: &str) {
     }
 }
 
+async fn kill_port_5678() {
+    let _ = tokio::process::Command::new("bash")
+        .args(["-c", "lsof -ti:5678 | xargs kill -9 2>/dev/null"])
+        .output()
+        .await;
+}
+
 pub async fn create_session(
     req: web::Json<CreateSessionRequest>,
     store: web::Data<SessionStore>,
@@ -225,6 +232,7 @@ pub async fn preview_start(
                 .await;
         }
     }
+    kill_port_5678().await;
     let code_dir = match solutions_code_dir(&project_name) {
         Ok(d) => d,
         Err(e) => return HttpResponse::InternalServerError().body(e),
@@ -261,12 +269,9 @@ pub async fn preview_stop(preview: web::Data<PreviewProcess>) -> impl Responder 
             .arg(pid.to_string())
             .output()
             .await;
-        let _ = tokio::process::Command::new("kill")
-            .args(["-9", &pid.to_string()])
-            .output()
-            .await;
         *state = None;
     }
+    kill_port_5678().await;
     HttpResponse::Ok().json(PreviewResponse {
         ok: true,
         url: None,
