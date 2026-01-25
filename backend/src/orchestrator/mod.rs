@@ -170,14 +170,23 @@ async fn run_coordinator(
         let mut session = shared_session.write().await;
         let workers: Vec<String> = session.workers.iter().map(|w| w.id.clone()).collect();
         let testers: Vec<String> = session.testers.iter().map(|t| t.id.clone()).collect();
+        let mut log_lines = Vec::new();
+        log_lines.push(format!("Coordinator assigning {} tasks to {} workers and {} testers\n", session.tasks.len(), workers.len(), testers.len()));
         for (i, task) in session.tasks.iter_mut().enumerate() {
             if i < workers.len() {
                 task.assigned_worker = Some(workers[i].clone());
+                log_lines.push(format!("Task #{} -> {}", task.id, workers[i]));
             }
             if !testers.is_empty() {
                 task.assigned_tester = Some(testers[i % testers.len()].clone());
+                log_lines.push(format!("Task #{} tester -> {}", task.id, testers[i % testers.len()]));
             }
         }
+        log_lines.push(String::new());
+        log_lines.push("All tasks assigned.".to_string());
+        let log_content = log_lines.join("\n");
+        let log_path = worktree.join("logs.txt");
+        let _ = tokio::fs::write(&log_path, &log_content).await;
         session.coordinator.status = AgentStatus::Done;
         session.coordinator.finished_at = Some(Utc::now());
         let event = Event::info(
