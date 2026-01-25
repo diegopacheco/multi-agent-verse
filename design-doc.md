@@ -71,6 +71,7 @@ Screen is split into two panels:
   - Current status (pending, running, done, error)
   - Log output (stdout/stderr) - viewable even while agent is running
   - Error message if failed
+  - ESC key closes the modal
 - Real-time status updates via polling
 - Partial logs available while agents are running (shows "RUNNING" status with execution details)
 - Fullscreen button to expand panel to full screen (ESC to exit)
@@ -425,6 +426,7 @@ multi-agent-verse/
 ├── solutions/                   # Generated solutions stored here
 ├── run.sh
 ├── stop.sh
+├── test-all.sh
 └── goals.md
 ```
 
@@ -440,6 +442,10 @@ multi-agent-verse/
 ### stop.sh
 - Kill backend and frontend processes
 - Clean up PID files
+
+### test-all.sh
+- Run frontend tests with bun/vitest
+- Run backend tests with cargo test
 
 ## Agent Detailed Design
 

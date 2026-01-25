@@ -1,11 +1,12 @@
 BACKLOG
 
-* [ ] When I click on the name of agent, when the modal show up I should be able to close it with ESC. Also update the design-doc.md.
+
 
 DONE
 
+* [x] When I click on the name of agent, when the modal show up I should be able to close it with ESC. Also update the design-doc.md. - Added ESC key handler to MonitorPanel.tsx that closes the agent modal (LogViewer). Updated design-doc.md.
+* [x] I need a script called test-all.sh that will run all bun tests and all rust tests. - Created test-all.sh that runs bun run test (vitest) and cargo test. Updated design-doc.md.
 * [x] The area for Agents and Tasks in tab 3 monitor are too small - Added fullscreen buttons to Agents, Tasks, and Event Log panels. ESC key exits fullscreen. Updated design-doc.md.
-
 * [x] (testing) Make sure we have end-to-end tests for the main user flows. - Created e2e-test.sh with tests for backend health, session creation, status/tasks/events/projects endpoints.
 * [x] build-all.sh must use bun not node. - Changed npm to bun in build-all.sh.
 * [x] (testing) Add unit test to the Rust code. - Added 15 unit tests in src/models/mod.rs covering AgentInfo, Task, Event, Session, and serialization.

@@ -42,6 +42,7 @@ function LogViewer({ agentId, logs, onClose }: LogViewerProps) {
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white text-2xl"
+            title="Close (ESC)"
           >
             x
           </button>

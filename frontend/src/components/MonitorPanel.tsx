@@ -35,13 +35,18 @@ function MonitorPanel({ sessionId, config }: MonitorPanelProps) {
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && fullscreenPanel) {
-        setFullscreenPanel(null)
+      if (e.key === 'Escape') {
+        if (selectedAgent) {
+          setSelectedAgent(null)
+          setAgentLogs(null)
+        } else if (fullscreenPanel) {
+          setFullscreenPanel(null)
+        }
       }
     }
     document.addEventListener('keydown', handleEsc)
     return () => document.removeEventListener('keydown', handleEsc)
-  }, [fullscreenPanel])
+  }, [fullscreenPanel, selectedAgent])
 
   const pollData = useCallback(async () => {
     try {
