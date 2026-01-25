@@ -14,7 +14,7 @@ The system has a Rust backend (Actix-web/Tokio) and a TypeScript frontend (React
 |-----------|-------|---------|
 | claude-code | opus-4-5 | `claude -p <prompt> --model opus-4-5 --dangerously-skip-permissions` |
 | codex | gpt-5.2 | `codex exec --full-auto --model gpt-5.2 <prompt>` |
-| copilot | sonnet | `copilot --allow-all --model sonnet -p <prompt>` |
+| copilot | claude-sonnet-4 | `copilot --allow-all --model claude-sonnet-4 -p <prompt>` |
 | gemini | gemini-3 | `gemini -y <prompt>` |
 | llr3 | llama3 | `llr3 -p <prompt>` |
 
