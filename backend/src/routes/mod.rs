@@ -217,21 +217,17 @@ pub async fn preview_start(
     let project_name = path.into_inner();
     {
         let existing = preview.read().await;
-        if let Some(pid) = *existing {
+        if let Some((pid, ref old_project)) = *existing {
+            run_stop_sh(old_project).await;
             let _ = tokio::process::Command::new("kill")
                 .arg(pid.to_string())
                 .output()
                 .await;
         }
     }
-    let code_dir = match std::env::current_dir() {
-        Ok(d) => d
-            .parent()
-            .unwrap()
-            .join("solutions")
-            .join(&project_name)
-            .join("code"),
-        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    let code_dir = match solutions_code_dir(&project_name) {
+        Ok(d) => d,
+        Err(e) => return HttpResponse::InternalServerError().body(e),
     };
     let run_sh = code_dir.join("run.sh");
     if !run_sh.exists() {
@@ -246,7 +242,7 @@ pub async fn preview_start(
             let pid = child.id().unwrap_or(0);
             {
                 let mut state = preview.write().await;
-                *state = Some(pid);
+                *state = Some((pid, project_name));
             }
             HttpResponse::Ok().json(PreviewResponse {
                 ok: true,
@@ -259,7 +255,8 @@ pub async fn preview_start(
 
 pub async fn preview_stop(preview: web::Data<PreviewProcess>) -> impl Responder {
     let mut state = preview.write().await;
-    if let Some(pid) = *state {
+    if let Some((pid, ref old_project)) = *state {
+        run_stop_sh(old_project).await;
         let _ = tokio::process::Command::new("kill")
             .arg(pid.to_string())
             .output()
