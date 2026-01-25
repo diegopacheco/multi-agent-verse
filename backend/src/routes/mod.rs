@@ -14,7 +14,7 @@ use crate::orchestrator::{create_shared_session, run_orchestration, SharedSessio
 use crate::solutions::{list_projects, read_agent_logs};
 
 pub type SessionStore = Arc<RwLock<HashMap<String, SharedSession>>>;
-pub type PreviewProcess = Arc<RwLock<Option<u32>>>;
+pub type PreviewProcess = Arc<RwLock<Option<(u32, String)>>>;
 
 pub fn create_session_store() -> SessionStore {
     Arc::new(RwLock::new(HashMap::new()))
@@ -22,6 +22,29 @@ pub fn create_session_store() -> SessionStore {
 
 pub fn create_preview_state() -> PreviewProcess {
     Arc::new(RwLock::new(None))
+}
+
+fn solutions_code_dir(project_name: &str) -> Result<std::path::PathBuf, String> {
+    std::env::current_dir()
+        .map_err(|e| e.to_string())
+        .and_then(|d| {
+            d.parent()
+                .ok_or("Cannot get parent directory".to_string())
+                .map(|p| p.join("solutions").join(project_name).join("code"))
+        })
+}
+
+async fn run_stop_sh(project_name: &str) {
+    if let Ok(code_dir) = solutions_code_dir(project_name) {
+        let stop_sh = code_dir.join("stop.sh");
+        if stop_sh.exists() {
+            let _ = tokio::process::Command::new("bash")
+                .arg("stop.sh")
+                .current_dir(&code_dir)
+                .output()
+                .await;
+        }
+    }
 }
 
 pub async fn create_session(
