@@ -1,10 +1,10 @@
 BACKLOG
 
-* [ ] IF the tabs are enabled anywhere in the app if I press 1 should goto tab 1, 2 to tab 2, 4 to tab 3 and 4 to tab 4. - Add keyboard shortcuts for tab navigation. If I press a should toto the agent tab, p, to the prompt, t to the tasks, o to preview, ? should show all shortcutrs. upddate design-doc.md and todo.txt
-* [ ] add the logo on the top ledft of the screen make sure the logo is transaparent so it does not look ugly. 
 
 DONE
 
+* [x] Keyboard shortcuts for tab navigation: 1/a=Config, 2/p=Prompt, 3/t=Monitor, 4/o=Preview, ?=help dialog, ESC=close. Added to App.tsx. Updated design-doc.md.
+* [x] Logo on top left: Added logo.png to assets, imported in App.tsx, displayed with opacity-80 and 48x48 size. Updated design-doc.md.
 * [x] 100% test coverage for the frontend code, all files ts must have tests. All 11 test files, 72 tests passing: App.test.tsx, client.test.ts, ConfigPanel.test.tsx, PromptPanel.test.tsx, AgentTree.test.tsx, TaskList.test.tsx, EventLog.test.tsx, LogViewer.test.tsx, PreviewPanel.test.tsx, MonitorPanel.test.tsx, ProgressBar.test.tsx.
 * [x] 100% test coverage for the backend code, all rust files must have tests. All 52 tests passing: models (16), agents (15: claude/copilot/codex/gemini/llr3/mod), orchestrator (6), routes (7), solutions (5).
 * [x] Tab 4 preview: added search box to filter projects, bigger project area (w-64), scrollbar on project list, fullscreen button on preview panel, ESC to close fullscreen, fits on screen. Updated design-doc.md.

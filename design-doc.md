@@ -4,6 +4,23 @@
 
 Multi-Agent Verse is a multi-agent orchestrator system with a Rust backend and TypeScript/Bun/TanStack/React 19 frontend. The system uses CLI agents (not APIs) to execute tasks in parallel, following the same pattern as local-agent-orama.
 
+## UI Header
+
+- Logo displayed on top left (transparent, 48x48px)
+- Application title and tagline
+- Help button showing keyboard shortcuts
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| 1 or a | Go to Configuration tab |
+| 2 or p | Go to Prompt tab |
+| 3 or t | Go to Monitor (Tasks) tab |
+| 4 or o | Go to Preview tab |
+| ? | Toggle help dialog |
+| ESC | Close dialogs/modals |
+
 ## Agent Types
 
 1. **task-splitter** - Single instance. Receives the user prompt and breaks it into N parallelizable tasks.

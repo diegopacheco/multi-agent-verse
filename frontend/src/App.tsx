@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ConfigPanel from './components/ConfigPanel'
 import PromptPanel from './components/PromptPanel'
 import MonitorPanel from './components/MonitorPanel'
 import PreviewPanel from './components/PreviewPanel'
 import { createSession, runSession } from './api/client'
+import logoImg from './assets/logo.png'
 
 type Tab = 'config' | 'prompt' | 'monitor' | 'preview'
 
@@ -19,6 +20,7 @@ function App() {
   const [config, setConfig] = useState<Config | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isRunning, setIsRunning] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
 
   const handleConfigNext = (newConfig: Config) => {
     setConfig(newConfig)
@@ -52,6 +54,46 @@ function App() {
     }
   }
 
+  const navigateToTab = useCallback((tab: Tab) => {
+    if (tab === 'prompt' && !config) return
+    if (tab === 'monitor' && !sessionId) return
+    setActiveTab(tab)
+  }, [config, sessionId])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      
+      switch (e.key) {
+        case '1':
+        case 'a':
+          navigateToTab('config')
+          break
+        case '2':
+        case 'p':
+          navigateToTab('prompt')
+          break
+        case '3':
+        case 't':
+          navigateToTab('monitor')
+          break
+        case '4':
+        case 'o':
+          navigateToTab('preview')
+          break
+        case '?':
+          setShowHelp(prev => !prev)
+          break
+        case 'Escape':
+          setShowHelp(false)
+          break
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [navigateToTab])
+
   const getTabClass = (tab: Tab) => {
     const base = 'px-6 py-3 font-medium transition-colors'
     if (tab === activeTab) {
@@ -67,19 +109,48 @@ function App() {
   }
 
   const handleTabClick = (tab: Tab) => {
-    if (tab === 'prompt' && !config) return
-    if (tab === 'monitor' && !sessionId) return
-    setActiveTab(tab)
+    navigateToTab(tab)
   }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 py-6 px-8 border-b border-slate-800">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold">Multi-Agent Verse</h1>
-          <p className="text-slate-400 text-sm">
-            Multi-agent orchestrator with task splitting and parallel execution
-          </p>
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="bg-slate-800 rounded-lg p-6 max-w-md">
+            <h2 className="text-xl font-bold mb-4">Keyboard Shortcuts</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span>1 or a</span><span className="text-slate-400">Configuration tab</span></div>
+              <div className="flex justify-between"><span>2 or p</span><span className="text-slate-400">Prompt tab</span></div>
+              <div className="flex justify-between"><span>3 or t</span><span className="text-slate-400">Monitor (Tasks) tab</span></div>
+              <div className="flex justify-between"><span>4 or o</span><span className="text-slate-400">Preview tab</span></div>
+              <div className="flex justify-between"><span>?</span><span className="text-slate-400">Toggle this help</span></div>
+              <div className="flex justify-between"><span>ESC</span><span className="text-slate-400">Close dialogs</span></div>
+            </div>
+            <button
+              onClick={() => setShowHelp(false)}
+              className="mt-4 w-full py-2 bg-blue-600 hover:bg-blue-700 rounded"
+            >
+              Close (ESC)
+            </button>
+          </div>
+        </div>
+      )}
+      <header className="flex-shrink-0 py-4 px-8 border-b border-slate-800">
+        <div className="max-w-6xl mx-auto flex items-center gap-4">
+          <img src={logoImg} alt="Logo" className="h-12 w-12 opacity-80" />
+          <div>
+            <h1 className="text-2xl font-bold">Multi-Agent Verse</h1>
+            <p className="text-slate-400 text-xs">
+              Multi-agent orchestrator with task splitting and parallel execution
+            </p>
+          </div>
+          <button
+            onClick={() => setShowHelp(true)}
+            className="ml-auto text-slate-500 hover:text-white text-sm"
+            title="Keyboard shortcuts"
+          >
+            ? Help
+          </button>
         </div>
       </header>
       <nav className="flex-shrink-0 border-b border-slate-800">
