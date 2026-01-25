@@ -20,6 +20,20 @@ The system has a Rust backend (Actix-web/Tokio) and a TypeScript frontend (React
 
 All five agent CLIs must be installed and available on PATH for their respective model to work. The llr3 agent runs Llama 3 locally via llama.cpp and automatically downloads the GGUF model (~4.7GB) to `~/llama/llama-3.gguf` on first run.
 
+## Result
+
+Configuration: Select the agent/model and set worker/tester counts. <br/>
+<img src="mav-result-1.png" width="400" />
+
+Prompt: Enter project name and prompt. <br/>
+<img src="mav-result-2.png" width="400" />
+
+Monitor: Real-time status of agents and tasks. <br/>
+<img src="mav-result-3.png" width="400" />
+
+Preview: View generated project output. <br/>
+<img src="mav-result-4.png" width="400" />
+ 
 ## How It Works
 
 ### Agent Hierarchy
