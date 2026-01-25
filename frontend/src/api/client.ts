@@ -73,6 +73,15 @@ export interface EventsResponse {
   events: Event[]
 }
 
+export interface ProjectsResponse {
+  projects: string[]
+}
+
+export interface PreviewResponse {
+  ok: boolean
+  url?: string
+}
+
 const BASE_URL = '/api'
 
 export async function createSession(req: CreateSessionRequest): Promise<CreateSessionResponse> {
@@ -116,6 +125,28 @@ export async function getTasks(sessionId: string): Promise<TasksResponse> {
 export async function getEvents(sessionId: string): Promise<EventsResponse> {
   const response = await fetch(`${BASE_URL}/events/${sessionId}`)
   if (!response.ok) throw new Error('Failed to get events')
+  return response.json()
+}
+
+export async function getProjects(): Promise<ProjectsResponse> {
+  const response = await fetch(`${BASE_URL}/projects`)
+  if (!response.ok) throw new Error('Failed to get projects')
+  return response.json()
+}
+
+export async function startPreview(projectName: string): Promise<PreviewResponse> {
+  const response = await fetch(`${BASE_URL}/preview/start/${projectName}`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error('Failed to start preview')
+  return response.json()
+}
+
+export async function stopPreview(): Promise<PreviewResponse> {
+  const response = await fetch(`${BASE_URL}/preview/stop`, {
+    method: 'POST',
+  })
+  if (!response.ok) throw new Error('Failed to stop preview')
   return response.json()
 }
 

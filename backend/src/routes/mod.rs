@@ -7,16 +7,21 @@ use uuid::Uuid;
 
 use crate::models::{
     AgentInfo, AgentRole, AgentStatus, CreateSessionRequest, CreateSessionResponse,
-    EventsResponse, LogsResponse, RunRequest, RunResponse, Session, StatusResponse,
-    TasksResponse,
+    EventsResponse, LogsResponse, PreviewResponse, ProjectsResponse, RunRequest, RunResponse,
+    Session, StatusResponse, TasksResponse,
 };
 use crate::orchestrator::{create_shared_session, run_orchestration, SharedSession};
-use crate::solutions::read_agent_logs;
+use crate::solutions::{list_projects, read_agent_logs};
 
 pub type SessionStore = Arc<RwLock<HashMap<String, SharedSession>>>;
+pub type PreviewProcess = Arc<RwLock<Option<u32>>>;
 
 pub fn create_session_store() -> SessionStore {
     Arc::new(RwLock::new(HashMap::new()))
+}
+
+pub fn create_preview_state() -> PreviewProcess {
+    Arc::new(RwLock::new(None))
 }
 
 pub async fn create_session(
@@ -172,6 +177,79 @@ pub async fn get_events(
     let session = shared_session.read().await;
     HttpResponse::Ok().json(EventsResponse {
         events: session.events.clone(),
+    })
+}
+
+pub async fn get_projects() -> impl Responder {
+    match list_projects().await {
+        Ok(projects) => HttpResponse::Ok().json(ProjectsResponse { projects }),
+        Err(e) => HttpResponse::InternalServerError().body(e),
+    }
+}
+
+pub async fn preview_start(
+    path: web::Path<String>,
+    preview: web::Data<PreviewProcess>,
+) -> impl Responder {
+    let project_name = path.into_inner();
+    {
+        let existing = preview.read().await;
+        if let Some(pid) = *existing {
+            let _ = tokio::process::Command::new("kill")
+                .arg(pid.to_string())
+                .output()
+                .await;
+        }
+    }
+    let code_dir = match std::env::current_dir() {
+        Ok(d) => d
+            .parent()
+            .unwrap()
+            .join("solutions")
+            .join(&project_name)
+            .join("code"),
+        Err(e) => return HttpResponse::InternalServerError().body(e.to_string()),
+    };
+    let run_sh = code_dir.join("run.sh");
+    if !run_sh.exists() {
+        return HttpResponse::BadRequest().body("run.sh not found in project code directory");
+    }
+    match tokio::process::Command::new("bash")
+        .arg("run.sh")
+        .current_dir(&code_dir)
+        .spawn()
+    {
+        Ok(child) => {
+            let pid = child.id().unwrap_or(0);
+            {
+                let mut state = preview.write().await;
+                *state = Some(pid);
+            }
+            HttpResponse::Ok().json(PreviewResponse {
+                ok: true,
+                url: Some("http://localhost:5678/index.html".to_string()),
+            })
+        }
+        Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+    }
+}
+
+pub async fn preview_stop(preview: web::Data<PreviewProcess>) -> impl Responder {
+    let mut state = preview.write().await;
+    if let Some(pid) = *state {
+        let _ = tokio::process::Command::new("kill")
+            .arg(pid.to_string())
+            .output()
+            .await;
+        let _ = tokio::process::Command::new("kill")
+            .args(["-9", &pid.to_string()])
+            .output()
+            .await;
+        *state = None;
+    }
+    HttpResponse::Ok().json(PreviewResponse {
+        ok: true,
+        url: None,
     })
 }
 

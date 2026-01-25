@@ -41,8 +41,9 @@ Multi-Agent Verse is a multi-agent orchestrator system with a Rust backend and T
 - Text input for **project name** (required)
 - Large text area for the user to enter the main prompt
 - Display the selected configuration summary (model, worker count, tester count)
+- The user's prompt is automatically enriched before sending to the backend. The enrichment appends: "make sure the app works and have a run.sh that run the app, always run on the port 5678 and /index.html."
 - "Run" button that:
-  1. Sends prompt and project name to backend
+  1. Sends the enriched prompt and project name to backend
   2. task-splitter agent processes the prompt and breaks it into N tasks
   3. Tasks must be splittable and able to run in parallel
   4. Automatically transitions to Tab 3
@@ -86,6 +87,37 @@ Screen is split into two panels:
   - Testing tasks (yellow)
   - Completed tasks (green, with checkmark)
   - Failed tasks (red, with X)
+
+### Tab 4 - Preview
+
+Screen is split into two panels (50/50):
+
+**Left Panel - Project List (50%)**
+- Lists all projects found in the `solutions/` folder
+- Each project name is clickable
+- Shows project name as a list item
+- Highlights the currently selected project
+
+**Right Panel - Solution Preview (50%)**
+- Displays an iframe that renders the selected solution
+- When a project is clicked on the left:
+  1. Backend starts the project's `run.sh` (inside `solutions/{project_name}/code/`)
+  2. The iframe loads `http://localhost:5678/index.html`
+- If no project is selected, shows a placeholder message
+- Includes a stop button to stop the currently running preview
+
+### API Endpoints for Preview
+
+```
+GET /api/projects
+  Response: { projects: string[] }
+
+POST /api/preview/start/{project_name}
+  Response: { ok: bool, url: string }
+
+POST /api/preview/stop
+  Response: { ok: bool }
+```
 
 ## Observability
 
@@ -176,6 +208,15 @@ GET /api/tasks/{session_id}
 
 GET /api/events/{session_id}
   Response: { events: Event[] }
+
+GET /api/projects
+  Response: { projects: string[] }
+
+POST /api/preview/start/{project_name}
+  Response: { ok: bool, url: string }
+
+POST /api/preview/stop
+  Response: { ok: bool }
 ```
 
 ### Agent Execution with Model Parameter
@@ -336,7 +377,8 @@ multi-agent-verse/
 │       │   ├── TaskList.tsx
 │       │   ├── EventLog.tsx
 │       │   ├── ProgressBar.tsx
-│       │   └── LogViewer.tsx
+│       │   ├── LogViewer.tsx
+│       │   └── PreviewPanel.tsx
 │       └── routes/
 │           └── index.tsx
 ├── solutions/                   # Generated solutions stored here
@@ -363,7 +405,7 @@ multi-agent-verse/
 1. **Hierarchical Agent Structure** - Not flat, has task-splitter -> coordinator -> workers/testers
 2. **Dynamic Instance Count** - User defines how many workers/testers
 3. **Task Splitting** - Prompt is split into parallelizable tasks
-4. **Three-Tab UI** - Configuration, Prompt, Monitor instead of single page
+4. **Four-Tab UI** - Configuration, Prompt, Monitor, Preview
 5. **Tree Visualization** - Shows agent hierarchy with clickable nodes
 6. **Orchestration Logic** - Coordinator manages task assignment and flow
 7. **Split Monitor View** - Left panel for agents, right panel for task list
@@ -371,3 +413,5 @@ multi-agent-verse/
 9. **Model as CLI Parameter** - Model passed to agents via command line
 10. **Solutions Directory** - All generated code saved in solutions/{project_name}/
 11. **Project Name Required** - User must provide project name in Tab 2
+12. **Preview Tab** - Iframe-based preview of generated solutions running on port 5678
+13. **Prompt Enrichment** - User prompt automatically enriched with run.sh/port 5678 requirements

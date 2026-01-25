@@ -24,7 +24,10 @@ function PromptPanel({ config, onRun, onBack, isRunning }: PromptPanelProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (projectName.trim() && prompt.trim()) {
-      onRun(projectName.trim(), prompt.trim())
+      const enriched =
+        prompt.trim() +
+        '\n\nmake sure the app works and have a run.sh that run the app, always run on the port 5678 and /index.html.'
+      onRun(projectName.trim(), enriched)
     }
   }
 

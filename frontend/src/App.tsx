@@ -2,9 +2,10 @@ import { useState } from 'react'
 import ConfigPanel from './components/ConfigPanel'
 import PromptPanel from './components/PromptPanel'
 import MonitorPanel from './components/MonitorPanel'
+import PreviewPanel from './components/PreviewPanel'
 import { createSession, runSession } from './api/client'
 
-type Tab = 'config' | 'prompt' | 'monitor'
+type Tab = 'config' | 'prompt' | 'monitor' | 'preview'
 
 interface Config {
   model: string
@@ -101,6 +102,12 @@ function App() {
           >
             3. Monitor
           </button>
+          <button
+            className={getTabClass('preview')}
+            onClick={() => handleTabClick('preview')}
+          >
+            4. Preview
+          </button>
         </div>
       </nav>
       <main className="flex-1 p-8">
@@ -124,6 +131,9 @@ function App() {
                 testerCount: config.testerCount,
               }}
             />
+          )}
+          {activeTab === 'preview' && (
+            <PreviewPanel />
           )}
         </div>
       </main>

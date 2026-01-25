@@ -151,6 +151,18 @@ pub struct Summary {
     pub finished_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectsResponse {
+    pub projects: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PreviewResponse {
+    pub ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+}
+
 impl AgentInfo {
     pub fn new(id: String, role: AgentRole, model: String) -> Self {
         Self {

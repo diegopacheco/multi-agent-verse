@@ -96,6 +96,27 @@ pub async fn write_summary(base_path: &PathBuf, session: &Session) -> Result<(),
     Ok(())
 }
 
+pub async fn list_projects() -> Result<Vec<String>, String> {
+    let solutions_path = std::env::current_dir()
+        .map_err(|e| e.to_string())?
+        .parent()
+        .ok_or("Cannot get parent directory")?
+        .join("solutions");
+    let mut projects = Vec::new();
+    let mut entries = fs::read_dir(&solutions_path)
+        .await
+        .map_err(|e| e.to_string())?;
+    while let Some(entry) = entries.next_entry().await.map_err(|e| e.to_string())? {
+        if entry.file_type().await.map_err(|e| e.to_string())?.is_dir() {
+            if let Some(name) = entry.file_name().to_str() {
+                projects.push(name.to_string());
+            }
+        }
+    }
+    projects.sort();
+    Ok(projects)
+}
+
 pub async fn read_agent_logs(base_path: &PathBuf, agent_id: &str) -> Result<String, String> {
     let log_path = base_path.join(agent_id).join("logs.txt");
     fs::read_to_string(&log_path)
