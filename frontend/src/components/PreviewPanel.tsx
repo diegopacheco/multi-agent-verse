@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getProjects, startPreview, stopPreview } from '../api/client'
 
 function PreviewPanel() {
@@ -6,6 +6,9 @@ function PreviewPanel() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const pendingTimeoutRef = useRef<number | null>(null)
+  const activeProjectRef = useRef<string | null>(null)
 
   useEffect(() => {
     getProjects()
@@ -14,32 +17,69 @@ function PreviewPanel() {
   }, [])
 
   const handleSelectProject = async (project: string) => {
+    if (pendingTimeoutRef.current !== null) {
+      clearTimeout(pendingTimeoutRef.current)
+      pendingTimeoutRef.current = null
+    }
+    activeProjectRef.current = project
     setLoading(true)
     setSelectedProject(project)
     setPreviewUrl(null)
+    setError(null)
     try {
       await stopPreview().catch(() => {})
+      if (activeProjectRef.current !== project) {
+        return
+      }
       const res = await startPreview(project)
+      if (activeProjectRef.current !== project) {
+        return
+      }
       if (res.ok && res.url) {
-        setTimeout(() => {
-          setPreviewUrl(res.url + '?t=' + Date.now())
-          setLoading(false)
+        const url = res.url
+        pendingTimeoutRef.current = window.setTimeout(() => {
+          pendingTimeoutRef.current = null
+          if (activeProjectRef.current === project) {
+            setPreviewUrl(url + '?t=' + Date.now())
+            setLoading(false)
+          }
         }, 2000)
       } else {
-        setLoading(false)
+        if (activeProjectRef.current === project) {
+          setError('Failed to start preview - run.sh may be missing')
+          setLoading(false)
+        }
       }
     } catch {
-      setLoading(false)
+      if (activeProjectRef.current === project) {
+        setError('Failed to start preview - run.sh may be missing')
+        setLoading(false)
+      }
     }
   }
 
   const handleStop = async () => {
+    if (pendingTimeoutRef.current !== null) {
+      clearTimeout(pendingTimeoutRef.current)
+      pendingTimeoutRef.current = null
+    }
+    activeProjectRef.current = null
+    setLoading(false)
+    setPreviewUrl(null)
+    setSelectedProject(null)
+    setError(null)
     try {
       await stopPreview()
     } catch {}
-    setPreviewUrl(null)
-    setSelectedProject(null)
   }
+
+  useEffect(() => {
+    return () => {
+      if (pendingTimeoutRef.current !== null) {
+        clearTimeout(pendingTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleRefresh = () => {
     getProjects()
@@ -105,7 +145,12 @@ function PreviewPanel() {
               title="Solution Preview"
             />
           )}
-          {!loading && !previewUrl && (
+          {!loading && !previewUrl && error && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-red-400">{error}</p>
+            </div>
+          )}
+          {!loading && !previewUrl && !error && (
             <div className="flex items-center justify-center h-full">
               <p className="text-slate-500">Select a project to preview</p>
             </div>

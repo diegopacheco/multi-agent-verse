@@ -279,6 +279,20 @@ async fn run_single_worker(
         let _ = write_event_log(base_path, &event).await;
         let _ = write_session_state(base_path, &session).await;
     }
+    if tasks.is_empty() {
+        let log_path = log_dir.join("logs.txt");
+        let _ = tokio::fs::write(&log_path, "No tasks assigned to this worker.\n").await;
+        let mut session = shared_session.write().await;
+        if let Some(worker) = session.workers.iter_mut().find(|w| w.id == worker_id) {
+            worker.status = AgentStatus::Done;
+            worker.finished_at = Some(Utc::now());
+        }
+        let event = Event::info(format!("{} finished - no tasks assigned", worker_id), Some(worker_id.to_string()));
+        session.events.push(event.clone());
+        let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
+        return;
+    }
     for task in tasks {
         {
             let mut session = shared_session.write().await;
@@ -412,6 +426,20 @@ async fn run_single_tester(
         let _ = write_event_log(base_path, &event).await;
         let _ = write_session_state(base_path, &session).await;
     }
+    if tasks.is_empty() {
+        let log_path = log_dir.join("logs.txt");
+        let _ = tokio::fs::write(&log_path, "No tasks assigned to this tester.\n").await;
+        let mut session = shared_session.write().await;
+        if let Some(tester) = session.testers.iter_mut().find(|t| t.id == tester_id) {
+            tester.status = AgentStatus::Done;
+            tester.finished_at = Some(Utc::now());
+        }
+        let event = Event::info(format!("{} finished - no tasks to test", tester_id), Some(tester_id.to_string()));
+        session.events.push(event.clone());
+        let _ = write_event_log(base_path, &event).await;
+        let _ = write_session_state(base_path, &session).await;
+        return;
+    }
     for task in tasks {
         {
             let mut session = shared_session.write().await;
@@ -476,27 +504,37 @@ async fn parse_tasks_from_output(base_path: &PathBuf, count: usize, user_prompt:
     let log_path = base_path.join("task-splitter").join("logs.txt");
     if let Ok(logs) = tokio::fs::read_to_string(&log_path).await {
         if let Some(start) = logs.find('[') {
-            if let Some(end) = logs.rfind(']') {
-                let json_str = &logs[start..=end];
-                if let Ok(parsed) = serde_json::from_str::<Vec<serde_json::Value>>(json_str) {
-                    let tasks: Vec<Task> = parsed
-                        .iter()
-                        .enumerate()
-                        .map(|(i, v)| {
-                            let id = v.get("id")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or(&format!("{}", i + 1))
-                                .to_string();
-                            let desc = v.get("description")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("Implement feature")
-                                .to_string();
-                            Task::new(id, desc)
-                        })
-                        .collect();
-                    if !tasks.is_empty() {
-                        return tasks;
-                    }
+            let json_str = if let Some(end) = logs.rfind(']') {
+                logs[start..=end].to_string()
+            } else {
+                let partial = &logs[start..];
+                let trimmed = partial.trim_end();
+                if trimmed.ends_with(',') {
+                    format!("{}]", &trimmed[..trimmed.len()-1])
+                } else if trimmed.ends_with('}') {
+                    format!("{}]", trimmed)
+                } else {
+                    format!("{}]", trimmed)
+                }
+            };
+            if let Ok(parsed) = serde_json::from_str::<Vec<serde_json::Value>>(&json_str) {
+                let tasks: Vec<Task> = parsed
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        let id = v.get("id")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&format!("{}", i + 1))
+                            .to_string();
+                        let desc = v.get("description")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Implement feature")
+                            .to_string();
+                        Task::new(id, desc)
+                    })
+                    .collect();
+                if !tasks.is_empty() {
+                    return tasks;
                 }
             }
         }

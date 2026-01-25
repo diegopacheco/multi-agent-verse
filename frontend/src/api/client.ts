@@ -151,7 +151,7 @@ export async function stopPreview(): Promise<PreviewResponse> {
 }
 
 export const MODEL_OPTIONS = [
-  { cli_agent: 'claude-code', model: 'opus-4-5', label: 'Claude Code / Opus 4.5' },
+  { cli_agent: 'claude-code', model: 'claude-opus-4-5-20251101', label: 'Claude Code / Opus 4.5' },
   { cli_agent: 'codex', model: 'gpt-5.2', label: 'Codex / GPT 5.2' },
   { cli_agent: 'copilot', model: 'claude-sonnet-4', label: 'Copilot / Claude Sonnet 4' },
   { cli_agent: 'gemini', model: 'gemini-3', label: 'Gemini / Gemini 3' },

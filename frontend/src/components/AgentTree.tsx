@@ -102,7 +102,7 @@ function AgentTree({
           1
         )}
         {actualWorkers.length > 0 ? (
-          actualWorkers.map((w, i) =>
+          actualWorkers.map((w) =>
             renderAgent(w.id, w.id, w.status, 2)
           )
         ) : (
@@ -111,7 +111,7 @@ function AgentTree({
           )
         )}
         {actualTesters.length > 0 ? (
-          actualTesters.map((t, i) =>
+          actualTesters.map((t) =>
             renderAgent(t.id, t.id, t.status, 2)
           )
         ) : (
