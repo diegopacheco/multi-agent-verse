@@ -1,4 +1,4 @@
-import { Task, TaskStatus } from '../api/client'
+import { Task, TaskStatus, TaskType } from '../api/client'
 
 interface TaskListProps {
   tasks: Task[]
@@ -19,6 +19,60 @@ function getStatusStyles(status: TaskStatus): { bg: string; text: string; icon: 
   }
 }
 
+function getTaskTypeStyles(taskType: TaskType): { bg: string; text: string; label: string } {
+  switch (taskType) {
+    case 'parallel':
+      return { bg: 'bg-purple-900/30', text: 'text-purple-400', label: 'PARALLEL' }
+    case 'sequential':
+      return { bg: 'bg-orange-900/30', text: 'text-orange-400', label: 'SEQUENTIAL' }
+    default:
+      return { bg: 'bg-slate-800', text: 'text-slate-400', label: 'UNKNOWN' }
+  }
+}
+
+function TaskCard({ task }: { task: Task }) {
+  const statusStyles = getStatusStyles(task.status)
+  const typeStyles = getTaskTypeStyles(task.task_type || 'parallel')
+  return (
+    <div className={`p-3 rounded-lg border border-slate-700 ${statusStyles.bg}`}>
+      <div className="flex items-start gap-3">
+        <span className={`font-mono text-lg ${statusStyles.text}`}>
+          {statusStyles.icon}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-white">
+              Task #{task.id}
+            </span>
+            <span className={`text-xs px-2 py-0.5 rounded ${typeStyles.bg} ${typeStyles.text}`}>
+              {typeStyles.label}
+            </span>
+            {task.task_type === 'sequential' && task.order && (
+              <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">
+                Order: {task.order}
+              </span>
+            )}
+            <span className={`text-xs px-2 py-0.5 rounded ${statusStyles.bg} ${statusStyles.text} uppercase`}>
+              {task.status}
+            </span>
+          </div>
+          <p className="text-sm text-slate-300 mt-1 truncate">
+            {task.description}
+          </p>
+          <div className="flex gap-4 mt-2 text-xs text-slate-500">
+            {task.assigned_worker && (
+              <span>Worker: {task.assigned_worker}</span>
+            )}
+            {task.assigned_tester && (
+              <span>Tester: {task.assigned_tester}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TaskList({ tasks }: TaskListProps) {
   if (tasks.length === 0) {
     return (
@@ -28,44 +82,39 @@ function TaskList({ tasks }: TaskListProps) {
     )
   }
 
+  const parallelTasks = tasks.filter(t => t.task_type === 'parallel' || !t.task_type)
+  const sequentialTasks = tasks
+    .filter(t => t.task_type === 'sequential')
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+
   return (
-    <div className="space-y-2">
-      {tasks.map((task) => {
-        const styles = getStatusStyles(task.status)
-        return (
-          <div
-            key={task.id}
-            className={`p-3 rounded-lg border border-slate-700 ${styles.bg}`}
-          >
-            <div className="flex items-start gap-3">
-              <span className={`font-mono text-lg ${styles.text}`}>
-                {styles.icon}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-white">
-                    Task #{task.id}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded ${styles.bg} ${styles.text} uppercase`}>
-                    {task.status}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-300 mt-1 truncate">
-                  {task.description}
-                </p>
-                <div className="flex gap-4 mt-2 text-xs text-slate-500">
-                  {task.assigned_worker && (
-                    <span>Worker: {task.assigned_worker}</span>
-                  )}
-                  {task.assigned_tester && (
-                    <span>Tester: {task.assigned_tester}</span>
-                  )}
-                </div>
-              </div>
-            </div>
+    <div className="space-y-4">
+      {parallelTasks.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-purple-400 mb-2 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+            Parallel Tasks ({parallelTasks.length})
+          </h3>
+          <div className="space-y-2">
+            {parallelTasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
           </div>
-        )
-      })}
+        </div>
+      )}
+      {sequentialTasks.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-orange-400 mb-2 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-orange-400"></span>
+            Sequential Tasks ({sequentialTasks.length})
+          </h3>
+          <div className="space-y-2">
+            {sequentialTasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

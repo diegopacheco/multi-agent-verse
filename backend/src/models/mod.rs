@@ -47,10 +47,20 @@ pub enum TaskStatus {
     Failed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskType {
+    Parallel,
+    Sequential,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: String,
     pub description: String,
+    pub task_type: TaskType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assigned_worker: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -58,6 +68,20 @@ pub struct Task {
     pub status: TaskStatus,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SplitTasksResult {
+    pub parallel_tasks: Vec<TaskDefinition>,
+    pub sequential_tasks: Vec<TaskDefinition>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskDefinition {
+    pub id: String,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub order: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -200,11 +224,28 @@ impl AgentInfo {
 }
 
 impl Task {
-    pub fn new(id: String, description: String) -> Self {
+    pub fn new_parallel(id: String, description: String) -> Self {
         let now = Utc::now();
         Self {
             id,
             description,
+            task_type: TaskType::Parallel,
+            order: None,
+            assigned_worker: None,
+            assigned_tester: None,
+            status: TaskStatus::Pending,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    pub fn new_sequential(id: String, description: String, order: u32) -> Self {
+        let now = Utc::now();
+        Self {
+            id,
+            description,
+            task_type: TaskType::Sequential,
+            order: Some(order),
             assigned_worker: None,
             assigned_tester: None,
             status: TaskStatus::Pending,

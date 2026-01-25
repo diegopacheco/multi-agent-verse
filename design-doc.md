@@ -305,14 +305,32 @@ enum TaskStatus {
     Failed,
 }
 
+enum TaskType {
+    Parallel,
+    Sequential,
+}
+
 struct Task {
     id: String,
     description: String,
+    task_type: TaskType,
+    order: Option<u32>,
     assigned_worker: Option<String>,
     assigned_tester: Option<String>,
     status: TaskStatus,
     created_at: DateTime,
     updated_at: DateTime,
+}
+
+struct SplitTasksResult {
+    parallel_tasks: Vec<TaskDefinition>,
+    sequential_tasks: Vec<TaskDefinition>,
+}
+
+struct TaskDefinition {
+    id: String,
+    description: String,
+    order: Option<u32>,
 }
 
 struct Event {
@@ -407,6 +425,141 @@ multi-agent-verse/
 ### stop.sh
 - Kill backend and frontend processes
 - Clean up PID files
+
+## Agent Detailed Design
+
+### Task Splitter Design
+
+The task-splitter agent receives the user prompt and breaks it into independent tasks for parallel execution.
+
+**Responsibilities:**
+- Receive the user prompt and analyze it for parallelizable work
+- Generate a JSON structure with two categories of tasks: `parallel` and `sequential`
+- Ensure minimum of 3 tasks are generated (user's main task, create run.sh, create stop.sh)
+- Determine task dependencies - if tasks cannot run in parallel, mark them as sequential
+- Each task should have: id, description, type (parallel/sequential), order (for sequential tasks)
+
+**Output Format:**
+```json
+{
+  "parallel_tasks": [
+    { "id": "task-1", "description": "Create main application logic" },
+    { "id": "task-2", "description": "Create HTML/CSS frontend" }
+  ],
+  "sequential_tasks": [
+    { "id": "task-3", "description": "Create run.sh script", "order": 1 },
+    { "id": "task-4", "description": "Create stop.sh script", "order": 2 }
+  ]
+}
+```
+
+**Prompt Template for Task Splitter:**
+```
+You are a task splitter. Analyze the following prompt and break it into independent tasks.
+
+Rules:
+1. Minimum 3 tasks required
+2. Tasks that can run in parallel go to "parallel_tasks"
+3. Tasks with dependencies go to "sequential_tasks" with order number
+4. Always include: run.sh creation (sequential, last-1) and stop.sh creation (sequential, last)
+5. Each task must be self-contained and clearly described
+
+User Prompt: {prompt}
+
+Output ONLY valid JSON with parallel_tasks and sequential_tasks arrays.
+```
+
+### Coordinator Design
+
+The coordinator is a hybrid agent/engineering component that orchestrates the entire workflow.
+
+**Responsibilities:**
+- Receive task JSON from task-splitter (parallel and sequential tasks)
+- Maintain a main loop that runs until all tasks complete or fail
+- Distribute parallel tasks to available workers simultaneously
+- Queue sequential tasks and execute them in order after parallel tasks complete
+- Track task assignments: which worker has which task
+- Monitor worker status and reassign failed tasks if needed
+- Update overall progress after each task completion or meaningful progress
+- Must be the LAST agent to finish (waits for all workers and testers)
+
+**Workflow:**
+1. Parse tasks.json from task-splitter
+2. Start main orchestration loop
+3. Distribute parallel_tasks to available workers (N workers = N parallel tasks max)
+4. Wait for parallel tasks to complete
+5. Execute sequential_tasks one by one in order
+6. For each completed task, assign to a tester for validation
+7. Update progress: `progress = (completed_tasks / total_tasks) * 100`
+8. Loop until all tasks done and tested
+9. Generate summary.json and exit
+
+**State Machine:**
+```
+IDLE -> DISTRIBUTING_PARALLEL -> WAITING_PARALLEL ->
+DISTRIBUTING_SEQUENTIAL -> WAITING_SEQUENTIAL ->
+WAITING_TESTERS -> GENERATING_SUMMARY -> DONE
+```
+
+### Worker Design
+
+Workers execute individual coding tasks assigned by the coordinator.
+
+**Responsibilities:**
+- Execute exactly ONE task at a time
+- Write code to the shared `solutions/{project_name}/code/` directory
+- Log all output to `solutions/{project_name}/worker-{n}/logs.txt`
+- Report completion status back to coordinator
+- Update overall progress when task is done
+
+**Workflow:**
+1. Receive task assignment from coordinator
+2. Set status to RUNNING
+3. Execute the task using the configured agent/model CLI
+4. Write generated code to the code/ directory
+5. Set status to DONE (or ERROR if failed)
+6. Notify coordinator of completion
+7. Wait for next task assignment
+
+**Task Execution:**
+- Worker receives task description as prompt
+- Worker prompt is enriched with context: project name, code directory path, existing files
+- Worker must work within the code/ directory only
+
+### Tester Design
+
+Testers validate the work done by workers through manual and automated testing.
+
+**Responsibilities:**
+- Perform manual verification that the application works
+- Generate automated tests for the application
+- Execute tests and verify they pass
+- Report test results to coordinator
+- Update overall progress when testing completes
+
+**Workflow:**
+1. Receive completed task from coordinator
+2. Set status to RUNNING
+3. Manual Testing Phase:
+   - Check if required files exist
+   - Verify run.sh starts the application
+   - Verify application responds on port 5678
+   - Verify /index.html loads correctly
+4. Automated Testing Phase:
+   - Generate test cases based on task description
+   - Write tests to `solutions/{project_name}/code/tests/`
+   - Execute tests
+5. Report results:
+   - PASSED: All manual and automated tests pass
+   - FAILED: Any test fails (include failure details)
+6. Update progress and notify coordinator
+
+**Test Categories:**
+- Existence tests: Required files exist
+- Startup tests: run.sh works, app starts
+- Endpoint tests: HTTP endpoints respond correctly
+- Functionality tests: Core features work as expected
+- Cleanup tests: stop.sh properly terminates the app
 
 ## Key Differences from local-agent-orama
 

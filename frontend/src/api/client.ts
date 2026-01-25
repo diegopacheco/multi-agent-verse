@@ -1,6 +1,7 @@
 export type AgentStatus = 'pending' | 'running' | 'done' | 'error' | 'timeout'
 export type AgentRole = 'tasksplitter' | 'coordinator' | 'worker' | 'tester'
 export type TaskStatus = 'pending' | 'inprogress' | 'testing' | 'done' | 'failed'
+export type TaskType = 'parallel' | 'sequential'
 
 export interface AgentInfo {
   id: string
@@ -15,6 +16,8 @@ export interface AgentInfo {
 export interface Task {
   id: string
   description: string
+  task_type: TaskType
+  order?: number
   assigned_worker?: string
   assigned_tester?: string
   status: TaskStatus

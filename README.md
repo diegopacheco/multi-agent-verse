@@ -45,21 +45,24 @@ task-splitter (1)
             └── tester (N)
 ```
 
-- **task-splitter** - Receives the user prompt and breaks it into N parallelizable tasks. Outputs JSON.
-- **coordinator** - Assigns tasks to workers round-robin and maps testers to validate completed work.
-- **worker** - Executes coding tasks. Multiple instances run in parallel. Count is user-defined (1-10).
-- **tester** - Validates worker output. Multiple instances run in parallel. Count is user-defined (1-10).
+- **task-splitter** - Receives the user prompt and breaks it into parallel and sequential tasks. Outputs JSON with `parallel_tasks` and `sequential_tasks` arrays. Ensures minimum 3 tasks (always includes run.sh and stop.sh as sequential tasks).
+- **coordinator** - Orchestrates the entire workflow in 3 phases: (1) distribute and execute parallel tasks, (2) execute sequential tasks in order, (3) run testers. Must be the last agent to finish.
+- **worker** - Executes one coding task at a time. Multiple instances run in parallel for parallel tasks. Count is user-defined (1-10).
+- **tester** - Validates worker output through manual testing (file existence, run.sh works, port 5678 responds) and automated test generation. Count is user-defined (1-10).
 
 ### Workflow
 
 1. User picks a model/agent and sets worker and tester counts in **Tab 1 (Configuration)**.
 2. User enters a project name and prompt in **Tab 2 (Prompt)**. The prompt is automatically enriched with instructions to produce a `run.sh` that serves the app on port 5678 with `/index.html`.
 3. Backend creates a session and spawns the orchestration pipeline:
-   - task-splitter parses the prompt into parallel tasks
-   - coordinator assigns tasks to workers and testers
-   - workers execute tasks in parallel inside `solutions/{project_name}/code/`
-   - testers validate completed work
-4. **Tab 3 (Monitor)** shows real-time status with a split view: agent tree on the left, task list on the right, event log at the bottom. Polls every 2 seconds.
+   - task-splitter analyzes the prompt and outputs JSON with `parallel_tasks` and `sequential_tasks`
+   - coordinator runs a 3-phase orchestration loop:
+     - Phase 1: Distribute parallel tasks to workers and execute simultaneously
+     - Phase 2: Execute sequential tasks one by one in order (run.sh, stop.sh)
+     - Phase 3: Run testers to validate all completed tasks
+   - workers execute tasks inside `solutions/{project_name}/code/`
+   - testers perform manual verification and generate automated tests
+4. **Tab 3 (Monitor)** shows real-time status with a split view: agent tree on the left, task list (grouped by parallel/sequential) on the right, event log at the bottom. Polls every 2 seconds.
 5. **Tab 4 (Preview)** lists all completed projects from the `solutions/` folder. Clicking a project runs its `run.sh` and renders the output in an iframe.
 
 ### Solutions Directory
@@ -95,9 +98,9 @@ Stops both backend and frontend processes.
 
 ## Limitations
 
-- Each agent CLI (claude, codex, copilot, gemini) must be pre-installed and authenticated on the local machine. The system does not install or configure them.
+- Each agent CLI (claude, codex, copilot, gemini, llr3) must be pre-installed and authenticated on the local machine. The system does not install or configure them.
 - All agents share a single `solutions/{project_name}/code/` directory. Concurrent workers writing to the same files can produce conflicts.
-- The task-splitter relies on the AI model to produce valid JSON. If it fails, a fallback of 5 generic tasks is generated.
+- The task-splitter relies on the AI model to produce valid JSON with `parallel_tasks` and `sequential_tasks`. If parsing fails, fallback tasks are generated (parallel tasks based on worker count, plus run.sh and stop.sh as sequential).
 - Agent execution has a 300-second timeout. Long-running tasks will be killed and marked as timeout.
 - The coordinator does not re-assign failed tasks. If a worker or tester fails, the task stays in the failed state.
 - Preview requires the generated project to have a working `run.sh` that serves on port 5678. Only one project can be previewed at a time.
