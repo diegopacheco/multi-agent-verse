@@ -55,3 +55,46 @@ pub async fn run(state: SharedAgentState, prompt: &str, _model: &str, worktree: 
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::agents::create_shared_agent;
+    use crate::models::{AgentInfo, AgentRole};
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_gemini_run_sets_running_status() {
+        let agent = AgentInfo::new("test-gemini".to_string(), AgentRole::Worker, "gemini-3".to_string());
+        let state = create_shared_agent(agent);
+        let temp_dir = tempdir().unwrap();
+        let worktree = temp_dir.path().to_path_buf();
+        let log_dir = temp_dir.path().to_path_buf();
+        run(state.clone(), "test prompt", "gemini-3", &worktree, &log_dir).await;
+        let s = state.lock().await;
+        assert!(s.started_at.is_some());
+        assert!(s.finished_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_gemini_creates_prompt_file() {
+        let agent = AgentInfo::new("test-gemini".to_string(), AgentRole::Worker, "gemini-3".to_string());
+        let state = create_shared_agent(agent);
+        let temp_dir = tempdir().unwrap();
+        let worktree = temp_dir.path().to_path_buf();
+        let log_dir = temp_dir.path().to_path_buf();
+        run(state, "test prompt", "gemini-3", &worktree, &log_dir).await;
+        assert!(log_dir.join("prompt.md").exists());
+    }
+
+    #[tokio::test]
+    async fn test_gemini_creates_logs_file() {
+        let agent = AgentInfo::new("test-gemini".to_string(), AgentRole::Worker, "gemini-3".to_string());
+        let state = create_shared_agent(agent);
+        let temp_dir = tempdir().unwrap();
+        let worktree = temp_dir.path().to_path_buf();
+        let log_dir = temp_dir.path().to_path_buf();
+        run(state, "test prompt", "gemini-3", &worktree, &log_dir).await;
+        assert!(log_dir.join("logs.txt").exists());
+    }
+}

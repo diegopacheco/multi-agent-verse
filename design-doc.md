@@ -109,16 +109,17 @@ Screen is split into two panels:
 
 ### Tab 4 - Preview
 
-Screen is split into two panels (50/50):
+Single screen layout (no scrolling):
 
-**Left Panel - Project List (50%)**
-- Lists all projects found in the `solutions/` folder
+**Left Panel - Project List**
+- Search box to filter projects by name
+- Lists all projects found in the `solutions/` folder with scrollbar
 - Each project name is clickable
-- Shows project name as a list item
 - Highlights the currently selected project
 
-**Right Panel - Solution Preview (50%)**
+**Right Panel - Solution Preview**
 - Displays an iframe that renders the selected solution
+- Fullscreen button on the preview panel (ESC to exit)
 - When a project is clicked on the left:
   1. Backend starts the project's `run.sh` (inside `solutions/{project_name}/code/`)
   2. The iframe loads `http://localhost:5678/index.html`
@@ -454,8 +455,10 @@ multi-agent-verse/
 - Clean up PID files
 
 ### test-all.sh
-- Run frontend tests with bun/vitest
-- Run backend tests with cargo test
+- Run frontend tests with bun/vitest (72 tests across 11 files)
+- Run backend tests with cargo test (52 tests)
+- Frontend test coverage: App, API client, ConfigPanel, PromptPanel, AgentTree, TaskList, EventLog, LogViewer, PreviewPanel, MonitorPanel, ProgressBar
+- Backend test coverage: models (16), agents/mod (4), agents/claude (3), agents/copilot (3), agents/codex (3), agents/gemini (3), agents/llr3 (3), orchestrator (6), routes (7), solutions (5)
 
 ## Agent Detailed Design
 

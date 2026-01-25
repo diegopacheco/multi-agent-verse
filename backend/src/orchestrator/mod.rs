@@ -769,3 +769,63 @@ fn generate_fallback_tasks(count: usize, user_prompt: &str) -> Vec<Task> {
     ));
     tasks
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_shared_session() {
+        let session = Session {
+            id: "test-id".to_string(),
+            project_name: "test-project".to_string(),
+            prompt: "test prompt".to_string(),
+            model: "opus-4".to_string(),
+            cli_agent: "claude".to_string(),
+            task_splitter: AgentInfo::new("ts".to_string(), AgentRole::TaskSplitter, "opus-4".to_string()),
+            coordinator: AgentInfo::new("coord".to_string(), AgentRole::Coordinator, "opus-4".to_string()),
+            workers: vec![],
+            testers: vec![],
+            tasks: vec![],
+            events: vec![],
+            created_at: Utc::now(),
+        };
+        let shared = create_shared_session(session);
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let session = rt.block_on(async { shared.read().await.clone() });
+        assert_eq!(session.project_name, "test-project");
+    }
+
+    #[test]
+    fn test_generate_fallback_tasks_minimum_count() {
+        let tasks = generate_fallback_tasks(3, "build a calculator app");
+        assert!(tasks.len() >= 3);
+    }
+
+    #[test]
+    fn test_generate_fallback_tasks_includes_run_sh() {
+        let tasks = generate_fallback_tasks(5, "build a web app");
+        let has_run_sh = tasks.iter().any(|t| t.description.contains("run.sh"));
+        assert!(has_run_sh);
+    }
+
+    #[test]
+    fn test_generate_fallback_tasks_includes_stop_sh() {
+        let tasks = generate_fallback_tasks(5, "build a web app");
+        let has_stop_sh = tasks.iter().any(|t| t.description.contains("stop.sh"));
+        assert!(has_stop_sh);
+    }
+
+    #[test]
+    fn test_generate_fallback_tasks_short_prompt() {
+        let tasks = generate_fallback_tasks(3, "test");
+        assert!(!tasks.is_empty());
+    }
+
+    #[test]
+    fn test_generate_fallback_tasks_long_prompt() {
+        let tasks = generate_fallback_tasks(3, "this is a very long prompt with many words to test truncation");
+        let first_task = &tasks[0];
+        assert!(first_task.description.contains("..."));
+    }
+}

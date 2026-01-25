@@ -127,7 +127,7 @@ pub async fn read_agent_logs(base_path: &PathBuf, agent_id: &str) -> Result<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{AgentInfo, AgentRole, Task};
+    use crate::models::Task;
 
     #[test]
     fn test_task_status_done_filter() {
