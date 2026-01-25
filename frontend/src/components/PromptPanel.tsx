@@ -78,7 +78,7 @@ function PromptPanel({ config, onRun, onBack, isRunning }: PromptPanelProps) {
             className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 resize-none disabled:opacity-50"
           />
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 pt-4">
           <button
             type="button"
             onClick={onBack}
@@ -90,9 +90,9 @@ function PromptPanel({ config, onRun, onBack, isRunning }: PromptPanelProps) {
           <button
             type="submit"
             disabled={isRunning || !projectName.trim() || !prompt.trim()}
-            className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
+            className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors text-white text-lg"
           >
-            {isRunning ? 'Starting...' : 'Run'}
+            {isRunning ? 'Running...' : 'Run'}
           </button>
         </div>
       </form>

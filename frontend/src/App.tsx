@@ -115,7 +115,7 @@ function App() {
           <div className="h-full" style={{ display: activeTab === 'config' ? 'block' : 'none' }}>
             <ConfigPanel onNext={handleConfigNext} />
           </div>
-          <div className="h-full" style={{ display: activeTab === 'prompt' ? 'block' : 'none' }}>
+          <div className="h-full overflow-auto" style={{ display: activeTab === 'prompt' ? 'block' : 'none' }}>
             {config && (
               <PromptPanel
                 config={config}
