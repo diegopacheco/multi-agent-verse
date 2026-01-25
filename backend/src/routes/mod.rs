@@ -293,3 +293,82 @@ fn find_agent<'a>(session: &'a Session, agent_id: &str) -> Option<&'a AgentInfo>
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::AgentRole;
+
+    fn create_test_session() -> Session {
+        Session {
+            id: "test-session".to_string(),
+            project_name: "test-project".to_string(),
+            prompt: "test prompt".to_string(),
+            model: "opus-4-5".to_string(),
+            cli_agent: "claude-code".to_string(),
+            task_splitter: AgentInfo::new("task-splitter".to_string(), AgentRole::TaskSplitter, "opus-4-5".to_string()),
+            coordinator: AgentInfo::new("coordinator".to_string(), AgentRole::Coordinator, "opus-4-5".to_string()),
+            workers: vec![
+                AgentInfo::new("worker-1".to_string(), AgentRole::Worker, "opus-4-5".to_string()),
+                AgentInfo::new("worker-2".to_string(), AgentRole::Worker, "opus-4-5".to_string()),
+            ],
+            testers: vec![
+                AgentInfo::new("tester-1".to_string(), AgentRole::Tester, "opus-4-5".to_string()),
+            ],
+            tasks: vec![],
+            events: vec![],
+            created_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn test_find_agent_task_splitter() {
+        let session = create_test_session();
+        let agent = find_agent(&session, "task-splitter");
+        assert!(agent.is_some());
+        assert_eq!(agent.unwrap().id, "task-splitter");
+    }
+
+    #[test]
+    fn test_find_agent_coordinator() {
+        let session = create_test_session();
+        let agent = find_agent(&session, "coordinator");
+        assert!(agent.is_some());
+        assert_eq!(agent.unwrap().id, "coordinator");
+    }
+
+    #[test]
+    fn test_find_agent_worker() {
+        let session = create_test_session();
+        let agent = find_agent(&session, "worker-1");
+        assert!(agent.is_some());
+        assert_eq!(agent.unwrap().id, "worker-1");
+    }
+
+    #[test]
+    fn test_find_agent_tester() {
+        let session = create_test_session();
+        let agent = find_agent(&session, "tester-1");
+        assert!(agent.is_some());
+        assert_eq!(agent.unwrap().id, "tester-1");
+    }
+
+    #[test]
+    fn test_find_agent_not_found() {
+        let session = create_test_session();
+        let agent = find_agent(&session, "unknown-agent");
+        assert!(agent.is_none());
+    }
+
+    #[test]
+    fn test_create_session_store() {
+        let store = create_session_store();
+        assert!(Arc::strong_count(&store) >= 1);
+    }
+
+    #[test]
+    fn test_create_preview_state() {
+        let preview = create_preview_state();
+        assert!(Arc::strong_count(&preview) >= 1);
+    }
+}

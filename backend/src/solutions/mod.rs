@@ -123,3 +123,70 @@ pub async fn read_agent_logs(base_path: &PathBuf, agent_id: &str) -> Result<Stri
         .await
         .map_err(|e| e.to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{AgentInfo, AgentRole, Task};
+
+    #[test]
+    fn test_task_status_done_filter() {
+        let tasks = vec![
+            Task::new_parallel("1".to_string(), "Task 1".to_string()),
+            Task::new_parallel("2".to_string(), "Task 2".to_string()),
+        ];
+        let completed = tasks.iter().filter(|t| t.status == TaskStatus::Done).count();
+        assert_eq!(completed, 0);
+    }
+
+    #[test]
+    fn test_task_status_pending_filter() {
+        let tasks = vec![
+            Task::new_parallel("1".to_string(), "Task 1".to_string()),
+            Task::new_sequential("2".to_string(), "Task 2".to_string(), 1),
+        ];
+        let pending = tasks.iter().filter(|t| t.status == TaskStatus::Pending).count();
+        assert_eq!(pending, 2);
+    }
+
+    #[test]
+    fn test_summary_struct_creation() {
+        let summary = Summary {
+            session_id: "test-session".to_string(),
+            project_name: "test-project".to_string(),
+            model: "opus-4-5".to_string(),
+            total_tasks: 5,
+            completed_tasks: 3,
+            failed_tasks: 1,
+            total_duration_secs: 120,
+            created_at: Utc::now(),
+            finished_at: Utc::now(),
+        };
+        assert_eq!(summary.session_id, "test-session");
+        assert_eq!(summary.total_tasks, 5);
+        assert_eq!(summary.completed_tasks, 3);
+        assert_eq!(summary.failed_tasks, 1);
+    }
+
+    #[test]
+    fn test_event_format() {
+        let event = Event::info("Test message".to_string(), Some("agent-1".to_string()));
+        let line = format!(
+            "[{}] [{}] {} - {}",
+            event.timestamp.format("%Y-%m-%d %H:%M:%S"),
+            event.level,
+            event.agent_id.as_deref().unwrap_or("system"),
+            event.message
+        );
+        assert!(line.contains("INFO"));
+        assert!(line.contains("agent-1"));
+        assert!(line.contains("Test message"));
+    }
+
+    #[test]
+    fn test_event_format_no_agent() {
+        let event = Event::error("Error occurred".to_string(), None);
+        let agent_str = event.agent_id.as_deref().unwrap_or("system");
+        assert_eq!(agent_str, "system");
+    }
+}

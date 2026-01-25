@@ -2,10 +2,13 @@ BACKLOG
 
 * [ ] 100% test coverage for the frontend code, all files ts must have tests.
 * [ ] 100% test coverage for the backend code, all rust files must have tests.
-* [ ] Tab 2 confioguration, the prompt section should be on the left side of the screen imagine this screen in 2 collumns them project name and promt and the buttons stay on the right side so it all fits in one screen update the design-doc.md
+* [ ] On tab 4 preview - I want a little search box so can filter the projects you can make the project area a bit bigger but not a lot. put sroll bar on the project listn all this page sohuld fit on the screen - should also hbave a fullscreen button on the component and esc should close it. update the design-doc.md and todo.txt
 
 DONE
 
+* [x] Tab 2 config summary: increased font size from xs to base/sm, better spacing with flexbox layout. Updated design-doc.md.
+* [x] Tab 2 redesign: project name on left, compact config on right, prompt takes most space below with fullscreen button (ESC exits), Back/Run at bottom. No scroll needed. Updated design-doc.md.
+* [x] Tab 2 layout: form (project name, prompt, buttons) on left, configuration summary on right. Removed helper text. Updated design-doc.md.
 * [x] Bug - on the scren 2 prompt should be a button to run and them goto the next ui. - Made Run button more visible with green color, larger text, added padding. Button triggers handleRun which navigates to Monitor tab.
 * [x] When I click on the name of agent, when the modal show up I should be able to close it with ESC. Also update the design-doc.md. - Added ESC key handler to MonitorPanel.tsx that closes the agent modal (LogViewer). Updated design-doc.md.
 * [x] I need a script called test-all.sh that will run all bun tests and all rust tests. - Created test-all.sh that runs bun run test (vitest) and cargo test. Updated design-doc.md.

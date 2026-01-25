@@ -39,15 +39,25 @@ Multi-Agent Verse is a multi-agent orchestrator system with a Rust backend and T
 
 ### Tab 2 - Prompt Input
 
-- Text input for **project name** (required)
+Single screen layout (no scrolling):
+
+**Top Row (two columns)**
+- Left: Text input for **project name** (required) with larger text
+- Right: Configuration summary with readable font size showing Model, Workers, and Testers
+
+**Middle Section (fills remaining space)**
 - Large text area for the user to enter the main prompt
-- Display the selected configuration summary (model, worker count, tester count)
-- The user's prompt is automatically enriched before sending to the backend. The enrichment appends: "make sure the app works and have a run.sh that run the app, always run on the port 5678 and /index.html. also create a stop.sh that kills the app started by run.sh."
+- Fullscreen button to expand prompt to full screen (ESC to exit)
+
+**Bottom Row**
+- "Back" button to return to Tab 1
 - "Run" button that:
   1. Sends the enriched prompt and project name to backend
   2. task-splitter agent processes the prompt and breaks it into N tasks
   3. Tasks must be splittable and able to run in parallel
   4. Automatically transitions to Tab 3
+
+- The user's prompt is automatically enriched before sending to the backend. The enrichment appends: "make sure the app works and have a run.sh that run the app, always run on the port 5678 and /index.html. also create a stop.sh that kills the app started by run.sh."
 
 ### Tab 3 - Execution Monitor (Split View)
 
